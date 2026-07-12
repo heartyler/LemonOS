@@ -1,6 +1,29 @@
 package dev.lemonos;
 
-final class BackendCubeeLaunchService {
+final class BackendCubeeRoutingService {
+    HomeAction homeAction(
+            int clickedSlot,
+            int lookSlot,
+            int careSlot,
+            boolean lookEnabled,
+            boolean admin,
+            boolean currentServerLobby,
+            boolean currentServerSurvival,
+            boolean peopleShortcutPublic,
+            boolean sandboxAvailable) {
+        if (clickedSlot == lookSlot && lookEnabled) return HomeAction.LOOK;
+        if (clickedSlot == careSlot && admin) return HomeAction.CARE;
+        if (clickedSlot == 12 && !currentServerLobby && peopleShortcutPublic) return HomeAction.PEOPLE;
+        if (clickedSlot == 13) return HomeAction.PLACES;
+        if (clickedSlot == 14 && currentServerSurvival) return HomeAction.SURVIVAL_HOME;
+        if (clickedSlot == 14 && sandboxAvailable) return HomeAction.SANDBOX;
+        return HomeAction.NONE;
+    }
+
+    boolean isNavBack(int clickedSlot, int backSlot) {
+        return clickedSlot == backSlot;
+    }
+
     LaunchPlan rememberedSurfacePlan(
             CubeeSurface surface,
             CubeeRoot root,
@@ -11,30 +34,22 @@ final class BackendCubeeLaunchService {
             boolean bedrock) {
         CubeeRoot plannedRoot = root;
         CubeeSurface plannedSurface = surface;
-        if (surface == CubeeSurface.PLACES) {
-            return new LaunchPlan(LaunchAction.OPEN_GO, null, null);
-        }
+        if (surface == CubeeSurface.PLACES) return new LaunchPlan(LaunchAction.OPEN_GO, null, null);
         if (surface == CubeeSurface.PEOPLE) {
             if (!currentServerLobby && peopleShortcutPublic) {
                 return new LaunchPlan(LaunchAction.OPEN_LAST_PEOPLE, null, null);
             }
             plannedSurface = CubeeSurface.HOME;
         } else if (surface == CubeeSurface.ADMIN_PEOPLE) {
-            if (admin) {
-                return new LaunchPlan(LaunchAction.OPEN_LAST_ADMIN_PEOPLE, CubeeRoot.CARE, null);
-            }
+            if (admin) return new LaunchPlan(LaunchAction.OPEN_LAST_ADMIN_PEOPLE, CubeeRoot.CARE, null);
             plannedRoot = CubeeRoot.CUBEE;
             plannedSurface = CubeeSurface.HOME;
         } else if (surface == CubeeSurface.SANDBOX) {
-            if (sandboxAvailable) {
-                return new LaunchPlan(LaunchAction.OPEN_DRAWING, null, null);
-            }
+            if (sandboxAvailable) return new LaunchPlan(LaunchAction.OPEN_DRAWING, null, null);
             plannedSurface = CubeeSurface.HOME;
         }
         if (plannedRoot == CubeeRoot.CARE) {
-            if (admin) {
-                return new LaunchPlan(LaunchAction.OPEN_ADMIN, null, plannedSurface);
-            }
+            if (admin) return new LaunchPlan(LaunchAction.OPEN_ADMIN, null, plannedSurface);
             plannedRoot = CubeeRoot.CUBEE;
         }
         return new LaunchPlan(bedrock ? LaunchAction.OPEN_BEDROCK_HOME : LaunchAction.OPEN_JAVA_HOME, plannedRoot, plannedSurface);
@@ -47,17 +62,20 @@ final class BackendCubeeLaunchService {
             boolean peopleShortcutPublic,
             boolean sandboxAvailable,
             boolean bedrock) {
-        if (currentServerLobby) {
-            return new LaunchPlan(LaunchAction.OPEN_GO, CubeeRoot.CUBEE, null);
-        }
+        if (currentServerLobby) return new LaunchPlan(LaunchAction.OPEN_GO, CubeeRoot.CUBEE, null);
         if (currentServerSurvival && peopleShortcutPublic) {
             return new LaunchPlan(LaunchAction.OPEN_LAST_PEOPLE, CubeeRoot.CUBEE, null);
         }
         if (currentServerCreative && sandboxAvailable) {
             return new LaunchPlan(LaunchAction.OPEN_DRAWING, CubeeRoot.CUBEE, null);
         }
-        return new LaunchPlan(bedrock ? LaunchAction.OPEN_BEDROCK_HOME : LaunchAction.OPEN_JAVA_HOME, CubeeRoot.CUBEE, CubeeSurface.HOME);
+        return new LaunchPlan(
+                bedrock ? LaunchAction.OPEN_BEDROCK_HOME : LaunchAction.OPEN_JAVA_HOME,
+                CubeeRoot.CUBEE,
+                CubeeSurface.HOME);
     }
+
+    enum HomeAction { NONE, LOOK, CARE, PEOPLE, PLACES, SURVIVAL_HOME, SANDBOX }
 
     record LaunchPlan(LaunchAction action, CubeeRoot root, CubeeSurface surface) {
     }
@@ -69,6 +87,6 @@ final class BackendCubeeLaunchService {
         OPEN_DRAWING,
         OPEN_ADMIN,
         OPEN_BEDROCK_HOME,
-        OPEN_JAVA_HOME;
+        OPEN_JAVA_HOME
     }
 }

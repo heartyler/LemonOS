@@ -448,11 +448,10 @@ PluginMessageListener {
     private BackendAdminChunkActionService adminChunkActionService;
     private BackendBackupOperationService backupOperationService;
     private BackendCubeeNavigationService cubeeNavigationService;
-    private BackendCubeeLaunchService cubeeLaunchService;
+    private BackendCubeeRoutingService cubeeRoutingService;
     private BackendBedrockPageRouteService bedrockPageRouteService;
     private BackendBedrockFallbackService bedrockFallbackService;
     private BackendCubeeItemService cubeeItemService;
-    private BackendCubeeClickService cubeeClickService;
     private BackendSandboxInteractionService sandboxInteractionService;
     private BackendPlacesClickService placesClickService;
     private BackendPeopleClickService peopleClickService;
@@ -577,11 +576,10 @@ PluginMessageListener {
         this.adminChunkActionService = new BackendAdminChunkActionService();
         this.backupOperationService = new BackendBackupOperationService();
         this.cubeeNavigationService = new BackendCubeeNavigationService();
-        this.cubeeLaunchService = new BackendCubeeLaunchService();
+        this.cubeeRoutingService = new BackendCubeeRoutingService();
         this.bedrockPageRouteService = new BackendBedrockPageRouteService();
         this.bedrockFallbackService = new BackendBedrockFallbackService();
         this.cubeeItemService = new BackendCubeeItemService(this::isCubee);
-        this.cubeeClickService = new BackendCubeeClickService();
         this.sandboxInteractionService = new BackendSandboxInteractionService();
         this.placesClickService = new BackendPlacesClickService();
         this.peopleClickService = new BackendPeopleClickService();
@@ -3472,7 +3470,7 @@ PluginMessageListener {
             this.openDefaultLaunchPage(player);
             return;
         }
-        this.openCubeeLaunchPlan(player, this.cubeeLaunchService.rememberedSurfacePlan(
+        this.openCubeeLaunchPlan(player, this.cubeeRoutingService.rememberedSurfacePlan(
                 this.currentCubeeSurface(player),
                 this.currentCubeeRoot(player),
                 this.currentServer == ServerId.LOBBY,
@@ -3483,7 +3481,7 @@ PluginMessageListener {
     }
 
     private void openDefaultLaunchPage(Player player) {
-        this.openCubeeLaunchPlan(player, this.cubeeLaunchService.defaultLaunchPlan(
+        this.openCubeeLaunchPlan(player, this.cubeeRoutingService.defaultLaunchPlan(
                 this.currentServer == ServerId.LOBBY,
                 this.currentServer == ServerId.SURVIVAL,
                 this.currentServer == ServerId.CREATIVE,
@@ -3492,7 +3490,7 @@ PluginMessageListener {
                 this.isBedrockPlayer(player)));
     }
 
-    private void openCubeeLaunchPlan(Player player, BackendCubeeLaunchService.LaunchPlan launchPlan) {
+    private void openCubeeLaunchPlan(Player player, BackendCubeeRoutingService.LaunchPlan launchPlan) {
         if (launchPlan.root() != null) {
             this.switchCubeeRoot(player, launchPlan.root());
         }
@@ -3795,7 +3793,7 @@ PluginMessageListener {
     }
 
     private void handleHomePageClick(Player player, int slot) {
-        BackendCubeeClickService.HomeAction homeAction = this.cubeeClickService.homeAction(
+        BackendCubeeRoutingService.HomeAction homeAction = this.cubeeRoutingService.homeAction(
                 slot,
                 Ui.Home.LOOK.slot(),
                 Ui.Home.CARE.slot(),
@@ -8042,7 +8040,7 @@ PluginMessageListener {
     private void addBedrockHomeButton(SimpleForm.Builder builder, List<Runnable> actions, Player player, Ui.ButtonSpec buttonSpec, String lore) {
         boolean homeButton = buttonSpec == Ui.Home.HOME;
         boolean sandboxButton = buttonSpec == Ui.Home.SANDBOX;
-        BackendCubeeClickService.HomeAction action = this.cubeeClickService.homeAction(
+        BackendCubeeRoutingService.HomeAction action = this.cubeeRoutingService.homeAction(
                 buttonSpec.slot(),
                 Ui.Home.LOOK.slot(),
                 Ui.Home.CARE.slot(),
