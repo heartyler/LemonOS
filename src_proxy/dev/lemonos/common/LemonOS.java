@@ -4,7 +4,7 @@
 package dev.lemonos.common;
 
 public final class LemonOS {
-    public static final String RELEASE_VERSION = "1.0";
+    public static final String RELEASE_VERSION = LemonOSBuildVersion.VERSION;
     public static final String PROTOCOL_VERSION = "2.0";
     public static final String DATA_SCHEMA_VERSION = "2.0";
     public static final String ACCESS_SCHEMA_VERSION = "3.0";

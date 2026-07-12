@@ -15,6 +15,10 @@ $Classes = Join-Path $Root "build\proxy-classes"
 $SourceRoot = Join-Path $Root "src_proxy"
 $OutputDir = Join-Path $Root "build\libs"
 $OutputJar = Join-Path $OutputDir "lemonos_proxy.jar"
+$ReleaseVersion = (Get-Content -Raw -LiteralPath (Join-Path $Root "VERSION")).Trim()
+if ($ReleaseVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+    throw "VERSION is not a supported semantic version: $ReleaseVersion"
+}
 
 if (Test-Path -LiteralPath $Classes) {
     Remove-Item -LiteralPath $Classes -Recurse -Force
@@ -41,12 +45,19 @@ if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
     $Classpath += Get-ChildItem -Path (Join-Path $VelocityRoot "plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
 }
 
-$Sources = Get-ChildItem -Path $SourceRoot -Recurse -Filter "*.java" | ForEach-Object FullName
+$GeneratedSourceRoot = Join-Path $Root "build\generated-sources\proxy\dev\lemonos\common"
+$GeneratedVersionSource = Join-Path $GeneratedSourceRoot "LemonOSBuildVersion.java"
+& (Join-Path $Root "tools\write_version_source.ps1") -Root $Root -OutputPath $GeneratedVersionSource | Out-Null
+$Sources = @(Get-ChildItem -Path $SourceRoot -Recurse -Filter "*.java" | ForEach-Object FullName)
+$Sources += $GeneratedVersionSource
 & $Java -encoding UTF-8 -cp ($Classpath -join ";") -d $Classes $Sources
 if ($LASTEXITCODE -ne 0) {
     throw "Proxy javac failed with exit code $LASTEXITCODE"
 }
 Copy-Item -Path (Join-Path $SourceRoot "velocity-plugin.json") -Destination $Classes -Force
+$ProxyDescriptor = Join-Path $Classes "velocity-plugin.json"
+$ProxyDescriptorContent = (Get-Content -Raw -LiteralPath $ProxyDescriptor).Replace('${LEMONOS_VERSION}', $ReleaseVersion)
+Set-Content -LiteralPath $ProxyDescriptor -Value $ProxyDescriptorContent -Encoding ASCII -NoNewline
 $SourceSnapshot = (& (Join-Path $Root "tools\get_source_snapshot.ps1") -Root $Root).Trim()
 Set-Content -LiteralPath (Join-Path $Classes "lemonos-build.properties") -Value "sourceSnapshotSha256=$SourceSnapshot" -Encoding ASCII
 & $Jar --create --file $OutputJar -C $Classes .
