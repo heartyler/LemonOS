@@ -42,6 +42,20 @@ try {
         New-Item -ItemType Directory -Path (Join-Path $RuntimeRoot "$component\plugins") -Force | Out-Null
     }
     $manifestPath = Join-Path $RuntimeRoot "deployment.json"
+    @"
+servers:
+  velocity:
+    port: 25575
+  lobby:
+    port: 30036
+    rcon_port: 31036
+  survival:
+    port: 30037
+    rcon_port: 31037
+  creative:
+    port: 30038
+    rcon_port: 31038
+"@ | Set-Content -LiteralPath (Join-Path $RuntimeRoot "honey.yml") -Encoding ASCII
     @{
         product = "Honey"
         artifacts = @{
