@@ -1,6 +1,6 @@
 param(
     [string]$Root = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
-    [string]$JdkRoot = "C:\Program Files\Java\jdk-26.0.1"
+    [string]$JdkRoot = $(if ($env:JAVA_HOME) { $env:JAVA_HOME } else { "C:\Program Files\Java\jdk-26.0.1" })
 )
 $ErrorActionPreference = "Stop"
 $Source = Join-Path $Root "src\main\java\dev\lemonos"
