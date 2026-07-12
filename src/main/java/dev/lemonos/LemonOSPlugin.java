@@ -177,6 +177,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -213,6 +214,7 @@ import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 import org.geysermc.cumulus.form.SimpleForm;
+import org.geysermc.cumulus.response.SimpleFormResponse;
 import org.geysermc.floodgate.api.FloodgateApi;
 
 public final class LemonOSPlugin
@@ -477,6 +479,7 @@ PluginMessageListener {
     private BackendPasscodeInputService passcodeInputService;
     private BackendPasscodeLifecycleService passcodeLifecycleService;
     private BackendPasscodeDisplayService passcodeDisplayService;
+    private BackendEnvironmentDamageService environmentDamageService;
     public void onEnable() {
         this.getLogger().info("LemonOS build " + this.buildSourceSnapshot());
         this.runtimeLayout = BackendRuntimeLayout.resolve();
@@ -607,6 +610,7 @@ PluginMessageListener {
         this.passcodeInputService = new BackendPasscodeInputService(backendPasscodeLayout);
         this.passcodeLifecycleService = new BackendPasscodeLifecycleService();
         this.passcodeDisplayService = new BackendPasscodeDisplayService(backendPasscodeLayout);
+        this.environmentDamageService = new BackendEnvironmentDamageService();
         this.currentServer = this.detectServer();
         this.worldPolicy = BackendWorldPolicy.forBackend(this.currentServer.proxyName);
         this.lobbyBoundsService = new BackendLobbyBoundsService(LOBBY_BORDER_SIZE);
@@ -1432,7 +1436,7 @@ PluginMessageListener {
             entityDamageEvent.setCancelled(true);
             return;
         }
-        if (this.worldPolicy.protectEnvironment() && entityDamageEvent.getEntity() instanceof Player && this.isEnvironmentDamage(entityDamageEvent.getCause())) {
+        if (this.worldPolicy.protectEnvironment() && entityDamageEvent.getEntity() instanceof Player && this.isEnvironmentDamage(entityDamageEvent)) {
             entityDamageEvent.setCancelled(true);
             return;
         }
@@ -8966,7 +8970,8 @@ PluginMessageListener {
     private void applyWorldRules(World world) {
         this.setVerifiedGameRule(world, GameRules.SEND_COMMAND_FEEDBACK, false);
         this.setVerifiedGameRule(world, GameRules.SPAWN_MOBS, !this.worldPolicy.blockCreatureSpawns());
-        this.setVerifiedGameRule(world, GameRule.DO_FIRE_TICK, !this.worldPolicy.disableFireTick());
+        this.setVerifiedGameRule(world, GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER,
+                this.worldPolicy.disableFireTick() ? 0 : 128);
         this.setVerifiedGameRule(world, GameRules.PVP, !this.worldPolicy.protectPlayerPvp());
         this.setVerifiedGameRule(world, GameRules.FALL_DAMAGE, !this.worldPolicy.protectFallDamage());
         if (this.currentServer == ServerId.LOBBY && world.getName().equals(this.placeSpawnWorld(ServerId.LOBBY))) {
@@ -9000,8 +9005,11 @@ PluginMessageListener {
         }
     }
 
-    private boolean isEnvironmentDamage(EntityDamageEvent.DamageCause damageCause) {
-        return damageCause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION || damageCause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION || damageCause == EntityDamageEvent.DamageCause.FIRE || damageCause == EntityDamageEvent.DamageCause.FIRE_TICK || damageCause == EntityDamageEvent.DamageCause.HOT_FLOOR || damageCause == EntityDamageEvent.DamageCause.LAVA;
+    private boolean isEnvironmentDamage(EntityDamageEvent event) {
+        Material directBlock = event instanceof EntityDamageByBlockEvent blockEvent && blockEvent.getDamager() != null
+                ? blockEvent.getDamager().getType()
+                : null;
+        return this.environmentDamageService.isProtectedCause(event.getCause(), directBlock);
     }
 
     private void openNextTick(Runnable runnable) {
@@ -10357,15 +10365,15 @@ PluginMessageListener {
         return string != null && ("busy.".equals(string) || "unavailable.".equals(string) || "not ready yet.".equals(string) || "return home.".equals(string) || "open.".equals(string) || "closed.".equals(string) || "current.".equals(string) || "public.".equals(string) || "private.".equals(string) || "keep.".equals(string) || "once.".equals(string) || "hide.".equals(string) || "show.".equals(string) || "nobody here.".equals(string) || "no holders.".equals(string) || "wants to reset.".equals(string) || string.matches("[0-9]+") || string.matches("[0-9]+ waiting\\.") || string.matches("[0-9]+ holders?\\.") || string.contains("wants to reset.") || string.contains("available.") || string.contains("here."));
     }
 
-    private void sendBedrockForm(Player player, Object object2, List<Runnable> list) {
+    private void sendBedrockForm(Player player, SimpleForm.Builder builder, List<Runnable> actions) {
         UUID uUID = player.getUniqueId();
         long l = this.bedrockFormTokenCounter.incrementAndGet();
         this.bedrockActionTokens.remove(uUID);
         this.bedrockFormTokens.put(uUID, l);
-        Consumer<Object> consumer = object -> {
+        Consumer<SimpleFormResponse> consumer = response -> {
             try {
-                int n = ((Number)object.getClass().getMethod("clickedButtonId", new Class[0]).invoke(object, new Object[0])).intValue();
-                if (n < 0 || n >= list.size()) {
+                int n = response.clickedButtonId();
+                if (n < 0 || n >= actions.size()) {
                     return;
                 }
                 Long l2 = this.bedrockFormTokens.get(uUID);
@@ -10384,18 +10392,18 @@ PluginMessageListener {
                         return;
                     }
                     this.bedrockActionTokens.remove(uUID, l);
-                    ((Runnable)list.get(n)).run();
+                    actions.get(n).run();
                 }, 2L);
             }
-            catch (ReflectiveOperationException | RuntimeException exception) {
+            catch (RuntimeException exception) {
                 this.bedrockFormTokens.remove(uUID, l);
                 this.bedrockActionTokens.remove(uUID, l);
                 this.openJavaFallback(player);
             }
         };
-        ((SimpleForm.Builder)object2).validResultHandler((Consumer)consumer);
+        builder.validResultHandler(consumer);
         try {
-            FloodgateApi.getInstance().sendForm(player.getUniqueId(), ((SimpleForm.Builder)object2).build());
+            FloodgateApi.getInstance().sendForm(player.getUniqueId(), builder.build());
         }
         catch (RuntimeException runtimeException) {
             this.bedrockFormTokens.remove(uUID, l);

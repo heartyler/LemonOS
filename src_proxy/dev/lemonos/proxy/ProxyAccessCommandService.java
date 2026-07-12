@@ -3,10 +3,8 @@
  */
 package dev.lemonos.proxy;
 
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.velocitypowered.api.command.BrigadierCommand;
@@ -32,26 +30,46 @@ final class ProxyAccessCommandService {
     }
 
     BrigadierCommand lemonosAccessCommand() {
-        LiteralArgumentBuilder literalArgumentBuilder = (LiteralArgumentBuilder)((LiteralArgumentBuilder)BrigadierCommand.literalArgumentBuilder((String)"lemonos").requires(commandSource -> !(commandSource instanceof Player))).then(((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)BrigadierCommand.literalArgumentBuilder((String)"access").executes(commandContext -> {
-            this.sendLemonOSHelp((CommandSource)commandContext.getSource());
+        LiteralArgumentBuilder<CommandSource> access = BrigadierCommand.literalArgumentBuilder("access").executes(commandContext -> {
+            this.sendLemonOSHelp(commandContext.getSource());
             return 1;
-        })).then(BrigadierCommand.literalArgumentBuilder((String)"list").executes(commandContext -> {
-            this.handleConsoleLemonOSCommand((CommandSource)commandContext.getSource(), "access list");
+        });
+        access.then(BrigadierCommand.literalArgumentBuilder("list").executes(commandContext -> {
+            this.handleConsoleLemonOSCommand(commandContext.getSource(), "access list");
             return 1;
-        }))).then(BrigadierCommand.literalArgumentBuilder((String)"add").then(BrigadierCommand.requiredArgumentBuilder((String)"name", (ArgumentType)StringArgumentType.word()).suggests((commandContext, suggestionsBuilder) -> this.suggestOnlineNames(suggestionsBuilder)).executes(commandContext -> {
-            this.handleConsoleLemonOSCommand((CommandSource)commandContext.getSource(), "access add " + StringArgumentType.getString((CommandContext)commandContext, (String)"name"));
+        }));
+        access.then(BrigadierCommand.literalArgumentBuilder("add").then(
+                BrigadierCommand.requiredArgumentBuilder("name", StringArgumentType.word())
+                        .suggests((commandContext, suggestionsBuilder) -> this.suggestOnlineNames(suggestionsBuilder))
+                        .executes(commandContext -> {
+            this.handleConsoleLemonOSCommand(commandContext.getSource(), "access add " + StringArgumentType.getString(commandContext, "name"));
             return 1;
-        })))).then(BrigadierCommand.literalArgumentBuilder((String)"admin").then(BrigadierCommand.requiredArgumentBuilder((String)"name", (ArgumentType)StringArgumentType.word()).suggests((commandContext, suggestionsBuilder) -> this.suggestOnlineNames(suggestionsBuilder)).executes(commandContext -> {
-            this.handleConsoleLemonOSCommand((CommandSource)commandContext.getSource(), "access admin " + StringArgumentType.getString((CommandContext)commandContext, (String)"name"));
+        })));
+        access.then(BrigadierCommand.literalArgumentBuilder("admin").then(
+                BrigadierCommand.requiredArgumentBuilder("name", StringArgumentType.word())
+                        .suggests((commandContext, suggestionsBuilder) -> this.suggestOnlineNames(suggestionsBuilder))
+                        .executes(commandContext -> {
+            this.handleConsoleLemonOSCommand(commandContext.getSource(), "access admin " + StringArgumentType.getString(commandContext, "name"));
             return 1;
-        })))).then(BrigadierCommand.literalArgumentBuilder((String)"remove").then(BrigadierCommand.requiredArgumentBuilder((String)"name", (ArgumentType)StringArgumentType.word()).suggests((commandContext, suggestionsBuilder) -> this.suggestAdminNames(suggestionsBuilder)).executes(commandContext -> {
-            this.handleConsoleLemonOSCommand((CommandSource)commandContext.getSource(), "access remove " + StringArgumentType.getString((CommandContext)commandContext, (String)"name"));
+        })));
+        access.then(BrigadierCommand.literalArgumentBuilder("remove").then(
+                BrigadierCommand.requiredArgumentBuilder("name", StringArgumentType.word())
+                        .suggests((commandContext, suggestionsBuilder) -> this.suggestAdminNames(suggestionsBuilder))
+                        .executes(commandContext -> {
+            this.handleConsoleLemonOSCommand(commandContext.getSource(), "access remove " + StringArgumentType.getString(commandContext, "name"));
             return 1;
-        })))).then(BrigadierCommand.literalArgumentBuilder((String)"default").then(BrigadierCommand.requiredArgumentBuilder((String)"name", (ArgumentType)StringArgumentType.word()).suggests((commandContext, suggestionsBuilder) -> this.suggestAdminNames(suggestionsBuilder)).executes(commandContext -> {
-            this.handleConsoleLemonOSCommand((CommandSource)commandContext.getSource(), "access default " + StringArgumentType.getString((CommandContext)commandContext, (String)"name"));
+        })));
+        access.then(BrigadierCommand.literalArgumentBuilder("default").then(
+                BrigadierCommand.requiredArgumentBuilder("name", StringArgumentType.word())
+                        .suggests((commandContext, suggestionsBuilder) -> this.suggestAdminNames(suggestionsBuilder))
+                        .executes(commandContext -> {
+            this.handleConsoleLemonOSCommand(commandContext.getSource(), "access default " + StringArgumentType.getString(commandContext, "name"));
             return 1;
-        }))));
-        return new BrigadierCommand(literalArgumentBuilder);
+        })));
+        LiteralArgumentBuilder<CommandSource> root = BrigadierCommand.literalArgumentBuilder("lemonos")
+                .requires(commandSource -> !(commandSource instanceof Player))
+                .then(access);
+        return new BrigadierCommand(root);
     }
 
     private CompletableFuture<Suggestions> suggestOnlineNames(SuggestionsBuilder suggestionsBuilder) {

@@ -50,7 +50,7 @@ $GeneratedVersionSource = Join-Path $GeneratedSourceRoot "LemonOSBuildVersion.ja
 & (Join-Path $Root "tools\write_version_source.ps1") -Root $Root -OutputPath $GeneratedVersionSource | Out-Null
 $Sources = @(Get-ChildItem -Path $SourceRoot -Recurse -Filter "*.java" | ForEach-Object FullName)
 $Sources += $GeneratedVersionSource
-& $Java -encoding UTF-8 -cp ($Classpath -join ";") -d $Classes $Sources
+& $Java -Xlint:deprecation -Xlint:unchecked -Werror -encoding UTF-8 -cp ($Classpath -join ";") -d $Classes $Sources
 if ($LASTEXITCODE -ne 0) {
     throw "Proxy javac failed with exit code $LASTEXITCODE"
 }
