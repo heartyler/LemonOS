@@ -47,7 +47,7 @@ if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
 }
 
 $Sources = Get-ChildItem -Path $SourceRoot -Recurse -Filter "*.java" | ForEach-Object FullName
-& $Java -encoding UTF-8 -cp ($Classpath -join ";") -d $Classes $Sources
+& $Java -Xlint:deprecation -Xlint:unchecked -Werror -encoding UTF-8 -cp ($Classpath -join ";") -d $Classes $Sources
 if ($LASTEXITCODE -ne 0) {
     throw "Backend javac failed with exit code $LASTEXITCODE"
 }

@@ -9,7 +9,8 @@ foreach ($required in @(
     if (-not $policy.Contains($required)) { throw "World policy missing: $required" }
 }
 foreach ($required in @('for (World world : Bukkit.getWorlds())', 'onWorldLoad(WorldLoadEvent worldLoadEvent)',
-    'GameRules.SPAWN_MOBS', 'GameRule.DO_FIRE_TICK', 'GameRules.PVP', 'GameRules.FALL_DAMAGE')) {
+    'GameRules.SPAWN_MOBS', 'GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER',
+    'this.worldPolicy.disableFireTick() ? 0 : 128', 'GameRules.PVP', 'GameRules.FALL_DAMAGE')) {
     if (-not $plugin.Contains($required)) { throw "World policy integration missing: $required" }
 }
 foreach ($forbidden in @('randomTickSpeed', 'isCreativeSafeDamage', 'EntitiesLoadEvent')) {

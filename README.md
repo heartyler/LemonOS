@@ -61,7 +61,7 @@ The deployment tools refuse to reset or replace LemonOS files while known Honey 
 
 ## Continuous integration
 
-GitHub Actions runs dependency verification, all contracts, the standalone backend/proxy build, isolated runtime integration tests, migration staging, and patch-hygiene checks on pushes and pull requests. Successful runs publish both JARs as short-lived workflow artifacts.
+GitHub Actions runs dependency verification, all contracts, the standalone backend/proxy build, isolated runtime integration tests, migration staging, and patch-hygiene checks on pushes and pull requests. Backend and proxy compilation treats deprecation and unchecked warnings as errors. Successful runs publish both JARs as short-lived workflow artifacts.
 
 ## Releases
 

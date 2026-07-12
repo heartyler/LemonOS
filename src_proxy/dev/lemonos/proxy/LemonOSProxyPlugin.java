@@ -26,6 +26,7 @@ import dev.lemonos.proxy.runtime.ProxyRuntimeLayout;
 import dev.lemonos.common.AdminProtocol;
 import dev.lemonos.common.LemonOS;
 import com.google.inject.Inject;
+import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.command.CommandExecuteEvent;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
@@ -119,7 +120,9 @@ public final class LemonOSProxyPlugin {
         this.runtimeStateService.syncPlaytime();
         this.runtimeStateService.reconcilePlaceStatuses();
         this.server.getChannelRegistrar().register(new ChannelIdentifier[]{this.adminChannel});
-        this.server.getCommandManager().register(this.accessCommandService.lemonosAccessCommand());
+        BrigadierCommand accessCommand = this.accessCommandService.lemonosAccessCommand();
+        var accessCommandMeta = this.server.getCommandManager().metaBuilder(accessCommand).plugin(this).build();
+        this.server.getCommandManager().register(accessCommandMeta, accessCommand);
         this.server.getScheduler().buildTask((Object)this, this.runtimeStateService::writeOnlinePlayers).repeat(5L, TimeUnit.SECONDS).schedule();
         this.server.getScheduler().buildTask((Object)this, this.runtimeStateService::syncPlaytime).repeat(60L, TimeUnit.SECONDS).schedule();
         this.server.getScheduler().buildTask((Object)this, this.runtimeStateService::reconcilePlaceStatuses).repeat(5L, TimeUnit.SECONDS).schedule();
@@ -140,7 +143,7 @@ public final class LemonOSProxyPlugin {
     @Subscribe
     public void onKickedFromServer(KickedFromServerEvent kickedFromServerEvent) {
         String string = kickedFromServerEvent.getServer().getServerInfo().getName().toLowerCase(Locale.ROOT);
-        if (!Set.of("lobby", "survival", "creative").contains(string) || kickedFromServerEvent.kickedDuringLogin()) {
+        if (!Set.of("lobby", "survival", "creative").contains(string) || kickedFromServerEvent.kickedDuringServerConnect()) {
             return;
         }
         Component component = Component.text((String)"not available right now.", (NamedTextColor)NamedTextColor.DARK_GRAY);

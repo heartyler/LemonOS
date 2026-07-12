@@ -103,7 +103,7 @@ if (-not $runtimeProbeSource.Contains('resolve(".honeydock").resolve("launchers"
     throw "LemonOS proxy wake must use HoneyDock launchers without per-server start.bat dependency."
 }
 
-foreach ($required in @('GameRules.SEND_COMMAND_FEEDBACK', 'GameRules.SPAWN_MOBS', 'GameRule.DO_FIRE_TICK',
+foreach ($required in @('GameRules.SEND_COMMAND_FEEDBACK', 'GameRules.SPAWN_MOBS', 'GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER',
     'GameRules.PVP', 'GameRules.FALL_DAMAGE', 'setVerifiedGameRule', 'WorldLoadEvent')) {
     if (-not $source.Contains($required)) { throw "LemonOS typed world policy is missing: $required" }
 }
