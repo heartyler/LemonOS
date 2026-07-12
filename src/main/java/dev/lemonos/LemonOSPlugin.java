@@ -175,15 +175,9 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockBurnEvent;
-import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.BlockSpreadEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
@@ -637,6 +631,7 @@ PluginMessageListener {
         this.getServer().getMessenger().registerOutgoingPluginChannel((Plugin)this, ADMIN_CHANNEL);
         this.getServer().getMessenger().registerIncomingPluginChannel((Plugin)this, ADMIN_CHANNEL, (PluginMessageListener)this);
         Bukkit.getPluginManager().registerEvents((Listener)this, (Plugin)this);
+        Bukkit.getPluginManager().registerEvents(new BackendWorldProtectionListener(this.worldPolicy), (Plugin)this);
         this.applyWorldRules();
         this.startAvailabilityChecks();
         this.startAuraTask();
@@ -981,13 +976,6 @@ PluginMessageListener {
             return;
         }
         Bukkit.getScheduler().runTask((Plugin)this, () -> this.refillMainHand(player, material));
-    }
-
-    @EventHandler(priority=EventPriority.HIGHEST)
-    public void onCreatureSpawn(CreatureSpawnEvent creatureSpawnEvent) {
-        if (this.worldPolicy.blockCreatureSpawns()) {
-            creatureSpawnEvent.setCancelled(true);
-        }
     }
 
     @EventHandler
@@ -1508,43 +1496,6 @@ PluginMessageListener {
         }
         if (this.worldPolicy.protectPlayerPvp() && entityDamageByEntityEvent.getEntity() instanceof Player && entityDamageByEntityEvent.getDamager() instanceof Player) {
             entityDamageByEntityEvent.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onBlockBurn(BlockBurnEvent blockBurnEvent) {
-        if (this.worldPolicy.protectEnvironment()) {
-            blockBurnEvent.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onBlockSpread(BlockSpreadEvent blockSpreadEvent) {
-        if (this.worldPolicy.protectEnvironment() && blockSpreadEvent.getSource().getType() == Material.FIRE) {
-            blockSpreadEvent.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onBlockFromTo(BlockFromToEvent blockFromToEvent) {
-        if (this.worldPolicy.protectEnvironment() && blockFromToEvent.getBlock().getType() == Material.LAVA) {
-            blockFromToEvent.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onBlockExplode(BlockExplodeEvent blockExplodeEvent) {
-        if (this.worldPolicy.protectEnvironment()) {
-            blockExplodeEvent.blockList().clear();
-            blockExplodeEvent.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onEntityExplode(EntityExplodeEvent entityExplodeEvent) {
-        if (this.worldPolicy.protectEnvironment()) {
-            entityExplodeEvent.blockList().clear();
-            entityExplodeEvent.setCancelled(true);
         }
     }
 
