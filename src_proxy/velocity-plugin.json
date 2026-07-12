@@ -1,0 +1,9 @@
+{
+  "id": "lemonos_proxy",
+  "name": "lemonos_proxy",
+  "version": "1.0",
+  "main": "dev.lemonos.proxy.LemonOSProxyPlugin",
+  "authors": [
+    "LemonOS"
+  ]
+}

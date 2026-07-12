@@ -1,0 +1,23 @@
+package:
+  name: Honey
+  version: '26.2'
+lemonos:
+  version: '1.0'
+server: auto
+tab:
+  update-ticks: 6
+  footer:
+    lines:
+      - ""
+      - "%server%"
+stayed-close:
+  enabled: true
+  title: "Legacy Stayclose"
+hud:
+  made-room:
+    enabled: true
+    title: "Legacy Made Room"
+atmosphere:
+  enabled: false
+  servers:
+    creative: true

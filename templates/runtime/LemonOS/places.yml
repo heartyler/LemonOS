@@ -1,0 +1,30 @@
+# LemonOS place display config.
+# Safe: name, item, lore, status, spawn-world. Reserved metadata: server.
+package:
+  name: "Honey"
+  version: "26.2"
+lemonos:
+  version: "1.0"
+
+places:
+  lobby:
+    name: "Lobby"
+    server: "lobby"
+    status: "ready"
+    item: "OAK_LOG"
+    lore: "take your time."
+    spawn-world: "world"
+  survival:
+    name: "Survival"
+    server: "survival"
+    status: "ready"
+    item: "GRASS_BLOCK"
+    lore: "explore what comes next."
+    spawn-world: "world"
+  creative:
+    name: "Creative"
+    server: "creative"
+    status: "ready"
+    item: "CRAFTING_TABLE"
+    lore: "build what you imagine."
+    spawn-world: "world"

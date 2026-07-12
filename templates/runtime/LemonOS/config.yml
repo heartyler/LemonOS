@@ -1,0 +1,89 @@
+# LemonOS shared core config.
+# Feature presets live in boards.yml, atmosphere.yml, sandbox.yml, and survival.yml.
+package:
+  name: Honey
+  version: '26.2'
+lemonos:
+  version: 1.0
+server: auto
+
+cubee:
+  enabled: true
+  slot: 8
+
+look:
+  enabled: true
+
+auth:
+  java-login: true
+  bedrock-trusted: true
+  session-minutes: 10
+
+ui:
+  hidden-command-suggestions: true
+
+tab:
+  enabled: true
+  update-ticks: 1200
+  time:
+    zone: "Asia/Bangkok"
+    format: "EEEdd HH:mm"
+  header:
+    lines:
+    - "<#FAF9F6>Honey"
+    - "<#C9D8B6>green tea"
+    - ""
+  footer:
+    lines:
+    - ""
+    - "<gray>%server%"
+    - "<gray>%time%"
+
+rest:
+  enabled: true
+  idle-minutes: 5
+  auto-stop: true
+  sleep-minutes: 30
+  wake-delay-seconds: 2
+  status:
+    resting: "resting."
+    waking-up: "waking up."
+    sleep: "sleep."
+  suspend:
+    atmosphere: true
+    care-world-status: true
+
+sounds:
+  enabled: true
+  ui-click:
+    sound: block.note_block.hat
+    volume: 0.2
+    pitch: 1.2
+  numpad-press:
+    sound: block.copper_bulb.turn_on
+    volume: 0.30
+    pitch: 1.25
+  success:
+    sound: entity.experience_orb.pickup
+    volume: 0.24
+    pitch: 1.1
+  failed:
+    sound: block.note_block.bass
+    volume: 0.35
+    pitch: 0.7
+  notification:
+    sound: block.note_block.bell
+    volume: 0.22
+    pitch: 1.0
+  sandbox-first:
+    sound: block.wooden_button.click_on
+    volume: 0.60
+    pitch: 1.1
+  sandbox-second:
+    sound: block.wooden_button.click_off
+    volume: 0.60
+    pitch: 1.15
+  sandbox-done:
+    sound: entity.experience_orb.pickup
+    volume: 0.22
+    pitch: 1.1

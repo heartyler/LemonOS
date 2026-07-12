@@ -1,0 +1,76 @@
+# LemonOS Survival config.
+# Default: core survival helpers are enabled so LemonOS is ready to use.
+package:
+  name: Honey
+  version: '26.2'
+lemonos:
+  version: 1.0
+
+survival:
+  tree:
+    enabled: true
+    require-sneak: true
+    max-blocks: 160
+  miner:
+    enabled: true
+    require-sneak: true
+    max-blocks: 96
+  autocrop:
+    enabled: true
+    require-sneak: true
+    max-blocks: 128
+    replant: false
+  auto-plant:
+    enabled: true
+    require-sneak: true
+    require-tool: false
+    max-columns: 128
+    max-blocks: 128
+    radius: 8
+    reach: 10
+    bamboo:
+      enabled: true
+      keep-bottom: 1
+      radius: 8
+    sugar-cane:
+      enabled: true
+      keep-bottom: 1
+      radius: 32
+    cactus:
+      enabled: true
+      keep-bottom: 1
+      radius: 16
+    kelp:
+      enabled: false
+      keep-bottom: 1
+      radius: 8
+    pumpkin:
+      enabled: false
+    melon:
+      enabled: false
+    cocoa:
+      enabled: false
+  chest-sort:
+    enabled: true
+    require-sneak: true
+    require-empty-hand: true
+    containers:
+    - CHEST
+    - BARREL
+    - SHULKER_BOX
+  tool-switch:
+    enabled: true
+    require-sneak: true
+    allow-golden-tools: false
+    min-durability-left: 2
+  refill:
+    enabled: true
+    blocks: true
+    tools: true
+    weapons: true
+    prefer-inventory-first: true
+  recipe-book:
+    unlock-all: true
+    silent: true
+  chain-status:
+    enabled: true

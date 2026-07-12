@@ -1,0 +1,223 @@
+# LemonOS world display boards.
+# enabled controls rendering only; statistics continue to accumulate while a board is hidden.
+package:
+  name: Honey
+  version: '26.2'
+lemonos:
+  version: 1.0
+
+boards:
+  stayed-close:
+    enabled: false
+    title: Stayclose
+    subtitle: where small steps stay.
+    bottom-line: time spent here.
+    display:
+      world: world
+      x: 5.42
+      y: -60.86
+      z: -8.5
+      value-offset-z: 0.46
+      bedrock:
+        enabled: false
+        scale: 0.53
+        line-width: 260
+        background-alpha: 0
+        name-width: 12
+        title-offset-x: 0.0
+        title-offset-y: 0.27
+        title-offset-z: 0.0
+        subtitle-offset-x: 0.0
+        subtitle-offset-y: -0.2
+        subtitle-offset-z: 0.0
+        row-start-offset-x: 0.0
+        row-start-offset-y: -0.34
+        row-start-offset-z: 0.0
+        row-gap: -0.27
+        bottom-offset-x: 0.0
+        bottom-offset-y: -1.02
+        bottom-offset-z: 0.0
+        bottom-scale: 0.42
+        bottom-line-width: 260
+      yaw: 90.0
+      pitch: 0.0
+      billboard: fixed
+      scale: 0.53
+      title-offset-x: 0.0
+      title-offset-y: 0.15
+      title-offset-z: 0.0
+      subtitle-offset-y: 0.0
+      row-start-offset-y: -0.34
+      row-gap: -0.13
+      bottom-offset-y: -1.52
+      bottom-offset-z: 0.0
+      bottom-scale: 0.42
+      bottom-line-width: 260
+      name-offset-z: -0.3
+      background-alpha: 0
+      view-range: 32
+      line-width: 220
+    refresh-minutes: 1
+    top: 5
+    name-width: 12
+  made-room:
+    enabled: false
+    title: Made Room
+    subtitle: where ideas stay.
+    bottom-line: ideas shaped in Sandbox.
+    display:
+      world: world
+      x: 5.42
+      y: -60.86
+      z: 15.5
+      yaw: 90.0
+      pitch: 0.0
+      billboard: fixed
+      scale: 0.53
+      title-offset-x: 0.0
+      title-offset-y: 0.15
+      title-offset-z: 0.0
+      subtitle-offset-y: 0.0
+      row-start-offset-y: -0.34
+      row-gap: -0.13
+      bottom-offset-y: -1.52
+      bottom-offset-z: 0.0
+      bottom-scale: 0.42
+      bottom-line-width: 260
+      name-offset-z: -0.3
+      value-offset-z: 0.46
+      background-alpha: 0
+      view-range: 32
+      line-width: 220
+      bedrock:
+        enabled: false
+        scale: 0.53
+        line-width: 260
+        background-alpha: 0
+        name-width: 12
+        title-offset-x: 0.0
+        title-offset-y: 0.15
+        title-offset-z: 0.0
+        subtitle-offset-x: 0.0
+        subtitle-offset-y: -0.1
+        subtitle-offset-z: 0.0
+        row-start-offset-x: 0.0
+        row-start-offset-y: -0.34
+        row-start-offset-z: 0.0
+        row-gap: -0.16
+        bottom-offset-x: 0.0
+        bottom-offset-y: -1.02
+        bottom-offset-z: 0.0
+        bottom-scale: 0.42
+        bottom-line-width: 260
+    refresh-minutes: 1
+    top: 5
+    name-width: 12
+    scoring:
+      track-blocks-changed: true
+  grew-here:
+    enabled: false
+    title: Grow
+    subtitle: where good things grow.
+    bottom-line: crops planted and harvested.
+    display:
+      world: world
+      x: 5.42
+      y: -60.86
+      z: -0.5
+      yaw: 90.0
+      pitch: 0.0
+      billboard: fixed
+      scale: 0.53
+      title-offset-x: 0.0
+      title-offset-y: 0.15
+      title-offset-z: 0.0
+      subtitle-offset-y: 0.0
+      row-start-offset-y: -0.34
+      row-gap: -0.13
+      bottom-offset-y: -1.52
+      bottom-offset-z: 0.0
+      bottom-scale: 0.42
+      bottom-line-width: 260
+      name-offset-z: -0.3
+      value-offset-z: 0.46
+      background-alpha: 0
+      view-range: 32
+      line-width: 220
+      bedrock:
+        enabled: false
+        scale: 0.53
+        line-width: 260
+        background-alpha: 0
+        name-width: 12
+        title-offset-x: 0.0
+        title-offset-y: 0.15
+        title-offset-z: 0.0
+        subtitle-offset-x: 0.0
+        subtitle-offset-y: -0.1
+        subtitle-offset-z: 0.0
+        row-start-offset-x: 0.0
+        row-start-offset-y: -0.34
+        row-start-offset-z: 0.0
+        row-gap: -0.16
+        bottom-offset-x: 0.0
+        bottom-offset-y: -1.02
+        bottom-offset-z: 0.0
+        bottom-scale: 0.42
+        bottom-line-width: 260
+    refresh-minutes: 1
+    top: 5
+    name-width: 12
+  auto-chain:
+    enabled: false
+    title: Good Work
+    subtitle: where useful things come in.
+    bottom-line: chop, mine, and plant.
+    display:
+      world: world
+      x: 5.42
+      y: -60.86
+      z: 7.5
+      yaw: 90.0
+      pitch: 0.0
+      billboard: fixed
+      scale: 0.53
+      title-offset-x: 0.0
+      title-offset-y: 0.15
+      title-offset-z: 0.0
+      subtitle-offset-y: 0.0
+      row-start-offset-y: -0.34
+      row-gap: -0.13
+      bottom-offset-y: -1.52
+      bottom-offset-z: 0.0
+      bottom-scale: 0.42
+      bottom-line-width: 260
+      name-offset-z: -0.3
+      value-offset-z: 0.46
+      background-alpha: 0
+      view-range: 32
+      line-width: 220
+      bedrock:
+        enabled: false
+        scale: 0.53
+        line-width: 260
+        background-alpha: 0
+        name-width: 12
+        title-offset-x: 0.0
+        title-offset-y: 0.15
+        title-offset-z: 0.0
+        subtitle-offset-x: 0.0
+        subtitle-offset-y: -0.1
+        subtitle-offset-z: 0.0
+        row-start-offset-x: 0.0
+        row-start-offset-y: -0.34
+        row-start-offset-z: 0.0
+        row-gap: -0.16
+        bottom-offset-x: 0.0
+        bottom-offset-y: -1.02
+        bottom-offset-z: 0.0
+        bottom-scale: 0.42
+        bottom-line-width: 260
+    refresh-minutes: 1
+    top: 5
+    name-width: 12

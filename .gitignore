@@ -1,0 +1,17 @@
+# Generated build and behavioral-test output
+/build/
+
+# Downloaded dependencies restored from the pinned manifest
+/third_party/runtime/*.jar
+/third_party/plugins/*.jar
+
+# Local runtime and deployment state
+/.deploy-backups/
+*.log
+
+# Editor and operating-system files
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+.DS_Store

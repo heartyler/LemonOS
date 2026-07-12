@@ -1,0 +1,20 @@
+name: lemonos
+version: 1.0
+main: dev.lemonos.LemonOSPlugin
+api-version: '1.21'
+depend:
+  - floodgate
+softdepend:
+  - SkinsRestorer
+  - Chunky
+commands:
+  cubee:
+    description: Hidden Cubee access path.
+    usage: /cubee
+  help:
+    description: Hidden Cubee emergency access path.
+    usage: /help
+permissions:
+  lemonos.admin:
+    description: LemonOS administrative access.
+    default: op

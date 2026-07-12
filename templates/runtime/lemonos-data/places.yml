@@ -1,0 +1,8 @@
+version: "2.0"
+places:
+  lobby:
+    status: ready
+  survival:
+    status: ready
+  creative:
+    status: ready

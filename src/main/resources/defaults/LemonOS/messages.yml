@@ -1,0 +1,126 @@
+# LemonOS player-facing text.
+# Only keys generated here are public config. Other short result phrases are Honey identity wording.
+package:
+  name: "Honey"
+  version: "26.2"
+lemonos:
+  version: "1.0"
+
+items:
+  cubee:
+    name: "Cubee"
+    lore: "green tea"
+  login:
+    name: "Login"
+    lore: "enter passcode."
+
+prompts:
+  enter-passcode: "Enter Passcode"
+  create-passcode: "Create Passcode"
+  passcode-length: "4-8 numbers"
+  use-basic-tool: "Use wooden axe."
+  use-more-tool: "Use wooden hoe."
+
+labels:
+  create: "Create"
+  enter: "Sign in"
+
+results:
+  youre-in: "you're in."
+  youre-here: "you're here."
+  try-again: "try again."
+  too-short: "too short."
+  too-long: "too long."
+  not-available-here: "out of range."
+  unavailable: "no signal."
+
+atmosphere:
+  time:
+    morning:
+      - "morning is here."
+      - "the day begins."
+      - "light comes in."
+      - "the world wakes up."
+      - "there is room for today."
+    day:
+      - "the day is open."
+      - "the world is bright."
+      - "there is still time."
+      - "the world feels near."
+      - "light fills the room."
+    sunset:
+      - "evening is here."
+      - "the sky turns soft."
+      - "home feels close."
+      - "the day slows down."
+      - "light starts to fade."
+    night:
+      - "night is here."
+      - "the house is quiet."
+      - "home is close."
+      - "the world is quiet."
+      - "stay close."
+  weather:
+    clear:
+      - "the sky is clear."
+      - "light comes back."
+      - "the world opens."
+      - "the air feels light."
+      - "everything feels bright."
+    rain:
+      - "rain is here."
+      - "the air turns soft."
+      - "the rain feels calm."
+      - "the world slows down."
+      - "stay close."
+    thunder:
+      - "the storm is near."
+      - "the sky is loud."
+      - "the house feels safe."
+      - "stay close."
+      - "the world feels far."
+  activity:
+    break-blocks:
+      - "little by little."
+      - "the work is showing."
+      - "it adds up."
+      - "you made room."
+      - "more space now."
+      - "that took time."
+      - "steady work."
+    place-blocks:
+      - "something is taking shape."
+      - "you made room here."
+      - "the shape is clearer now."
+      - "this place is changing."
+      - "it starts to feel right."
+      - "piece by piece."
+      - "the work is showing."
+    pickup-items:
+      - "you brought a lot back."
+      - "things add up."
+      - "worth keeping."
+      - "a little more gathered."
+      - "you found plenty."
+      - "more for later."
+      - "keep it close."
+    craft-items:
+      - "made with care."
+      - "ready for later."
+      - "that will help."
+      - "a little more ready."
+      - "things are coming together."
+      - "you made what you needed."
+    damage-survived:
+      - "that was close."
+      - "still here."
+      - "you made it through."
+      - "keep steady."
+      - "not done yet."
+    session-minutes:
+      - "you're still here."
+      - "the world is still here."
+      - "there is still time."
+      - "everything close."
+      - "the quiet feels familiar."
+      - "this place feels close."

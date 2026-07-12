@@ -1,0 +1,95 @@
+# LemonOS ambient Atmosphere preset.
+# Ambient Atmosphere is Survival-only. Care weather/time controls are independent.
+package:
+  name: Honey
+  version: '26.2'
+lemonos:
+  version: 1.0
+
+atmosphere:
+  enabled: true
+  actionbar:
+    duration-seconds: 4
+    repeat-seconds: 1
+    cooldown-seconds: 360
+  activity:
+    enabled: true
+    global-cooldown-seconds: 90
+    break-blocks:
+      enabled: true
+      threshold: 500
+      cooldown-seconds: 240
+    place-blocks:
+      enabled: true
+      threshold: 350
+      cooldown-seconds: 240
+    pickup-items:
+      enabled: true
+      threshold: 240
+      cooldown-seconds: 240
+    craft-items:
+      enabled: true
+      threshold: 64
+      cooldown-seconds: 240
+    damage-survived:
+      enabled: true
+      threshold: 7
+      cooldown-seconds: 240
+    session-minutes:
+      enabled: true
+      threshold: 30
+      cooldown-seconds: 240
+  music:
+    enabled: true
+    delay-seconds: 8
+    gap-seconds: 20
+    volume: 0.16
+    pitch: 1.0
+    actionbar:
+      enabled: false
+      format: playing {music}
+      refresh-ticks: 20
+      resume-delay-ticks: 80
+    display-names:
+      MUSIC_DISC_CAT: C418 - cat
+      MUSIC_DISC_CHIRP: C418 - chirp
+      MUSIC_DISC_FAR: C418 - far
+      MUSIC_DISC_MALL: C418 - mall
+      MUSIC_DISC_STRAD: C418 - strad
+      MUSIC_DISC_WAIT: C418 - wait
+      MUSIC_DISC_CREATOR_MUSIC_BOX: Lena Raine - Creator
+      MUSIC_DISC_LAVA_CHICKEN: Hyper Potions - Lava Chicken
+      MUSIC_DISC_BOUNCE: fingerspit - Bounce
+      MUSIC_DISC_RELIC: Aaron Cherof - Relic
+      MUSIC_DISC_OTHERSIDE: Lena Raine - otherside
+    weight:
+      warm: 80
+      playful: 15
+      special: 5
+    tracks:
+      warm:
+      - MUSIC_DISC_CAT
+      - MUSIC_DISC_CHIRP
+      - MUSIC_DISC_FAR
+      - MUSIC_DISC_MALL
+      - MUSIC_DISC_STRAD
+      - MUSIC_DISC_WAIT
+      - MUSIC_DISC_CREATOR_MUSIC_BOX
+      playful:
+      - MUSIC_DISC_LAVA_CHICKEN
+      - MUSIC_DISC_BOUNCE
+      special:
+      - MUSIC_DISC_RELIC
+      - MUSIC_DISC_OTHERSIDE
+    track-seconds:
+      MUSIC_DISC_CAT: 185
+      MUSIC_DISC_CHIRP: 185
+      MUSIC_DISC_FAR: 174
+      MUSIC_DISC_MALL: 197
+      MUSIC_DISC_STRAD: 188
+      MUSIC_DISC_WAIT: 238
+      MUSIC_DISC_CREATOR_MUSIC_BOX: 73
+      MUSIC_DISC_LAVA_CHICKEN: 135
+      MUSIC_DISC_BOUNCE: 155
+      MUSIC_DISC_RELIC: 218
+      MUSIC_DISC_OTHERSIDE: 195

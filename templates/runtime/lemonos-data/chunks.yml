@@ -1,0 +1,9 @@
+chunks:
+  survival:
+    dimension: world
+    size: 3000
+    status: idle.
+  creative:
+    dimension: world
+    size: 3000
+    status: idle.

@@ -1,0 +1,18 @@
+# LemonOS Sandbox config.
+# Advanced: enabled. Safe with validation: limits, tools, and default materials.
+# Honey runtime default: enabled so Creative Sandbox matches the live runtime gate.
+package:
+  name: "Honey"
+  version: "26.2"
+lemonos:
+  version: "1.0"
+
+sandbox:
+  enabled: true
+  max-blocks: 32768
+  history-limit: 30
+  basic-tool: "WOODEN_AXE"
+  more-tool: "WOODEN_HOE"
+  default-material: "STONE"
+  replace-source-material: "STONE"
+  replace-target-material: "OAK_PLANKS"
