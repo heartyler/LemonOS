@@ -453,8 +453,7 @@ PluginMessageListener {
     private BackendBedrockFallbackService bedrockFallbackService;
     private BackendCubeeItemService cubeeItemService;
     private BackendCubeeClickService cubeeClickService;
-    private BackendSandboxClickService sandboxClickService;
-    private BackendSandboxConfirmClickService sandboxConfirmClickService;
+    private BackendSandboxInteractionService sandboxInteractionService;
     private BackendPlacesClickService placesClickService;
     private BackendPeopleClickService peopleClickService;
     private BackendRequestsClickService requestsClickService;
@@ -585,8 +584,7 @@ PluginMessageListener {
         this.bedrockFallbackService = new BackendBedrockFallbackService();
         this.cubeeItemService = new BackendCubeeItemService(this::isCubee);
         this.cubeeClickService = new BackendCubeeClickService();
-        this.sandboxClickService = new BackendSandboxClickService();
-        this.sandboxConfirmClickService = new BackendSandboxConfirmClickService();
+        this.sandboxInteractionService = new BackendSandboxInteractionService();
         this.placesClickService = new BackendPlacesClickService();
         this.peopleClickService = new BackendPeopleClickService();
         this.requestsClickService = new BackendRequestsClickService();
@@ -3657,7 +3655,7 @@ PluginMessageListener {
             return;
         }
         if (cubeePage == CubeePage.DRAWING) {
-            this.handleSandboxClick(player, this.sandboxClickService.action(n));
+            this.handleSandboxClick(player, this.sandboxInteractionService.action(n));
             return;
         }
         if (cubeePage == CubeePage.CLONE_CONFIRM) {
@@ -4670,7 +4668,7 @@ PluginMessageListener {
         }
     }
 
-    private void handleSandboxClick(Player player, BackendSandboxClickService.SandboxClickAction sandboxClickAction) {
+    private void handleSandboxClick(Player player, BackendSandboxInteractionService.SandboxClickAction sandboxClickAction) {
         switch (sandboxClickAction) {
             case BACK -> {
                 this.switchCubeeSurface(player, CubeeSurface.HOME);
@@ -4692,7 +4690,7 @@ PluginMessageListener {
     }
 
     private void handleSandboxConfirmClick(Player player, int slot, Runnable confirmAction, Runnable cancelAction) {
-        BackendSandboxConfirmClickService.ConfirmAction confirmClickAction = this.sandboxConfirmClickService.action(slot, 14, 12);
+        BackendSandboxInteractionService.ConfirmAction confirmClickAction = this.sandboxInteractionService.confirmAction(slot, 14, 12);
         switch (confirmClickAction) {
             case CONFIRM -> confirmAction.run();
             case CANCEL -> {
@@ -8864,11 +8862,11 @@ PluginMessageListener {
     }
 
     private void addBedrockSandboxButton(SimpleForm.Builder builder, List<Runnable> actions, Player player, Ui.ButtonSpec buttonSpec) {
-        BackendSandboxClickService.SandboxClickAction action = this.sandboxClickService.action(buttonSpec.slot());
+        BackendSandboxInteractionService.SandboxClickAction action = this.sandboxInteractionService.action(buttonSpec.slot());
         this.addBedrockSandboxActionButton(builder, actions, player, buttonSpec, action);
     }
 
-    private void addBedrockSandboxActionButton(SimpleForm.Builder builder, List<Runnable> actions, Player player, Ui.ButtonSpec buttonSpec, BackendSandboxClickService.SandboxClickAction action) {
+    private void addBedrockSandboxActionButton(SimpleForm.Builder builder, List<Runnable> actions, Player player, Ui.ButtonSpec buttonSpec, BackendSandboxInteractionService.SandboxClickAction action) {
         switch (action) {
             case BACK -> this.bedrockButton(builder, actions, buttonSpec, () -> this.leaveBedrockSandbox(player));
             case UNDO -> this.bedrockButton(builder, actions, buttonSpec, () -> this.undoDrawingIfIdle(player));
@@ -8926,7 +8924,7 @@ PluginMessageListener {
     }
 
     private void addBedrockSandboxConfirmButton(SimpleForm.Builder builder, List<Runnable> actions, Player player, Ui.ButtonSpec buttonSpec, Ui.ButtonSpec confirmSpec, Runnable confirmAction, Runnable cancelAction) {
-        BackendSandboxConfirmClickService.ConfirmAction action = this.sandboxConfirmClickService.action(
+        BackendSandboxInteractionService.ConfirmAction action = this.sandboxInteractionService.confirmAction(
                 buttonSpec.slot(),
                 confirmSpec.slot(),
                 Ui.Confirm.CANCEL.slot());

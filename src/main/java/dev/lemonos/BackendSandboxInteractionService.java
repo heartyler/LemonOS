@@ -1,6 +1,6 @@
 package dev.lemonos;
 
-final class BackendSandboxClickService {
+final class BackendSandboxInteractionService {
     SandboxClickAction action(int clickedSlot) {
         return switch (clickedSlot) {
             case 0 -> SandboxClickAction.BACK;
@@ -19,6 +19,12 @@ final class BackendSandboxClickService {
         };
     }
 
+    ConfirmAction confirmAction(int clickedSlot, int confirmSlot, int cancelSlot) {
+        if (clickedSlot == confirmSlot) return ConfirmAction.CONFIRM;
+        if (clickedSlot == cancelSlot) return ConfirmAction.CANCEL;
+        return ConfirmAction.NONE;
+    }
+
     enum SandboxClickAction {
         NONE,
         BACK,
@@ -32,6 +38,12 @@ final class BackendSandboxClickService {
         CIRCLE,
         REPLACE,
         FLIP,
-        ROTATE;
+        ROTATE
+    }
+
+    enum ConfirmAction {
+        NONE,
+        CONFIRM,
+        CANCEL
     }
 }
