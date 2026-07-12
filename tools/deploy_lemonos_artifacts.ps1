@@ -63,8 +63,8 @@ foreach ($server in @("lobby", "survival", "creative")) {
 }
 
 $sourceSnapshot = ((Get-Content -LiteralPath (Join-Path $LemonOsRoot "build\classes\lemonos-build.properties") | Select-String '^sourceSnapshotSha256=').Line -split '=', 2)[1]
-$manifest.deployedAt = (Get-Date).ToString("o")
-$manifest.sourceSnapshotSha256 = $sourceSnapshot
+$manifest | Add-Member -NotePropertyName deployedAt -NotePropertyValue (Get-Date).ToString("o") -Force
+$manifest | Add-Member -NotePropertyName sourceSnapshotSha256 -NotePropertyValue $sourceSnapshot -Force
 $manifest.artifacts.lemonos = (Get-FileHash -LiteralPath $backend -Algorithm SHA256).Hash
 $manifest.artifacts.lemonosProxy = (Get-FileHash -LiteralPath $proxy -Algorithm SHA256).Hash
 $manifest | Add-Member -NotePropertyName lemonosDeployment -NotePropertyValue "artifact-deploy" -Force

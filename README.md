@@ -41,6 +41,12 @@ Generated artifacts:
 - `build/libs/lemonos.jar`
 - `build/libs/lemonos_proxy.jar`
 
+Exercise the complete runtime initialization, verification, artifact deployment, and backup flow in an isolated disposable runtime:
+
+```powershell
+.\tools\run_runtime_integration_tests.ps1
+```
+
 ## Runtime workflow
 
 Runtime reset and deployment tools require an offline Honey runtime with a valid `deployment.json` manifest:
@@ -55,4 +61,4 @@ The deployment tools refuse to reset or replace LemonOS files while known Honey 
 
 ## Continuous integration
 
-GitHub Actions runs dependency verification, all contracts, the standalone backend/proxy build, migration staging, and patch-hygiene checks on pushes and pull requests. Successful runs publish both JARs as short-lived workflow artifacts.
+GitHub Actions runs dependency verification, all contracts, the standalone backend/proxy build, isolated runtime integration tests, migration staging, and patch-hygiene checks on pushes and pull requests. Successful runs publish both JARs as short-lived workflow artifacts.

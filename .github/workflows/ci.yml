@@ -2,7 +2,7 @@ name: LemonOS CI
 
 on:
   push:
-    branches: [main, "agent/**"]
+    branches: [main, "codex/**"]
   pull_request:
     branches: [main]
 
@@ -34,6 +34,10 @@ jobs:
       - name: Build backend and proxy
         shell: powershell
         run: .\build_lemonos.ps1
+
+      - name: Run runtime integration tests
+        shell: powershell
+        run: .\tools\run_runtime_integration_tests.ps1
 
       - name: Check patch hygiene
         shell: powershell
