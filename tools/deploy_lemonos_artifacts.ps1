@@ -21,7 +21,7 @@ foreach ($required in @("velocity", "lobby", "survival", "creative")) {
 if ($null -eq $manifest.artifacts) {
     throw "Refusing deployment: artifact manifest section is missing."
 }
-$ports = @(25565, 30066, 30067, 30068, 31066, 31067, 31068)
+$ports = @(& (Join-Path $PSScriptRoot "get_runtime_ports.ps1") -RuntimeRoot $RuntimeRoot)
 $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -In $ports)
 if ($listeners.Count -gt 0) {
     throw "Refusing LemonOS deployment while Honey runtime ports are active."
