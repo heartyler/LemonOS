@@ -9,8 +9,16 @@ foreach ($required in @(
     "enum ConfirmAction { NONE, CONFIRM, CANCEL }"
 )) { if (-not $service.Contains($required)) { throw "Admin confirm contract missing: $required" } }
 if ($plugin -notmatch 'private BackendAdminConfirmClickService adminConfirmClickService' -or
-    ([regex]::Matches($plugin, 'this\.adminConfirmClickService\.action\(').Count -lt 8)) {
+    ([regex]::Matches($plugin, 'this\.adminConfirmClickService\.action\(').Count -lt 10)) {
     throw "Admin confirm flows are not consolidated."
+}
+foreach ($removed in @("BackendAdminChunksConfirmClickService", "BackendAdminBackupConfirmClickService")) {
+    if ($plugin.Contains($removed)) { throw "Redundant admin confirm service remains wired: $removed" }
+}
+foreach ($handler in @("handleAdminChunksConfirmClick", "handleAdminBackupConfirmClick")) {
+    if ($plugin -notmatch "(?s)private void $handler.*?BackendAdminConfirmClickService\.ConfirmAction") {
+        throw "Admin handler does not use the shared confirm service: $handler"
+    }
 }
 $pagedService = Join-Path $Root "src\main\java\dev\lemonos\admin\BackendAdminPagedSelectionClickService.java"
 $confirmService = Join-Path $Root "src\main\java\dev\lemonos\admin\BackendAdminConfirmClickService.java"

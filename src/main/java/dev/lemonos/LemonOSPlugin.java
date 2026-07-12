@@ -472,8 +472,6 @@ PluginMessageListener {
     private BackendAdminChunksClickService adminChunksClickService;
     private BackendAdminChunksDimensionClickService<ChunkDimension> adminChunksDimensionClickService;
     private BackendAdminChunksSizeClickService adminChunksSizeClickService;
-    private BackendAdminChunksConfirmClickService adminChunksConfirmClickService;
-    private BackendAdminBackupConfirmClickService adminBackupConfirmClickService;
     private BackendAdminGamemodeClickService adminGamemodeClickService;
     private BackendAdminPlayerClickService adminPlayerClickService;
     private BackendAdminPlayerControlClickService adminPlayerControlClickService;
@@ -603,8 +601,6 @@ PluginMessageListener {
         this.adminChunksClickService = new BackendAdminChunksClickService();
         this.adminChunksDimensionClickService = new BackendAdminChunksDimensionClickService<ChunkDimension>();
         this.adminChunksSizeClickService = new BackendAdminChunksSizeClickService();
-        this.adminChunksConfirmClickService = new BackendAdminChunksConfirmClickService();
-        this.adminBackupConfirmClickService = new BackendAdminBackupConfirmClickService();
         this.adminGamemodeClickService = new BackendAdminGamemodeClickService();
         this.adminPlayerClickService = new BackendAdminPlayerClickService();
         this.adminPlayerControlClickService = new BackendAdminPlayerControlClickService();
@@ -4338,12 +4334,12 @@ PluginMessageListener {
     }
 
     private void handleAdminChunksConfirmClick(Player player, int slot) {
-        BackendAdminChunksConfirmClickService.AdminChunksConfirmAction action = this.adminChunksConfirmClickService.action(
+        BackendAdminConfirmClickService.ConfirmAction action = this.adminConfirmClickService.action(
                 slot,
                 14,
                 12);
         switch (action) {
-            case START -> this.startChunks(player);
+            case CONFIRM -> this.startChunks(player);
             case CANCEL -> {
                 player.closeInventory();
                 player.sendMessage((Component)Component.text((String)"nothing changed.", (TextColor)NamedTextColor.DARK_GRAY));
@@ -4354,12 +4350,12 @@ PluginMessageListener {
     }
 
     private void handleAdminBackupConfirmClick(Player player, int slot) {
-        BackendAdminBackupConfirmClickService.AdminBackupConfirmAction action = this.adminBackupConfirmClickService.action(
+        BackendAdminConfirmClickService.ConfirmAction action = this.adminConfirmClickService.action(
                 slot,
                 14,
                 12);
         switch (action) {
-            case BACKUP -> this.startManualBackup(player);
+            case CONFIRM -> this.startManualBackup(player);
             case CANCEL -> {
                 player.closeInventory();
                 player.sendMessage((Component)Component.text((String)"nothing changed.", (TextColor)NamedTextColor.DARK_GRAY));
