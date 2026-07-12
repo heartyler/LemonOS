@@ -1,0 +1,67 @@
+name: LemonOS Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 26
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+
+      - name: Verify release tag
+        shell: powershell
+        run: |
+          $version = (Get-Content -Raw VERSION).Trim()
+          if ($env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match VERSION $version."
+          }
+
+      - name: Restore pinned dependencies
+        shell: powershell
+        run: .\tools\restore_test_dependencies.ps1
+
+      - name: Run contracts
+        shell: powershell
+        run: .\tools\run_lemonos_contracts.ps1
+
+      - name: Build release artifacts
+        shell: powershell
+        run: .\build_lemonos.ps1
+
+      - name: Run runtime integration tests
+        shell: powershell
+        run: .\tools\run_runtime_integration_tests.ps1
+
+      - name: Write checksums
+        shell: powershell
+        run: |
+          Get-ChildItem build\libs\lemonos*.jar | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          } | Set-Content -LiteralPath build\libs\SHA256SUMS.txt -Encoding ASCII
+
+      - name: Publish GitHub release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            build/libs/lemonos.jar `
+            build/libs/lemonos_proxy.jar `
+            build/libs/SHA256SUMS.txt `
+            --verify-tag `
+            --generate-notes `
+            --title "LemonOS $((Get-Content -Raw VERSION).Trim())"

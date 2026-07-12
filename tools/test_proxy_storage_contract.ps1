@@ -68,7 +68,10 @@ $harness = Join-Path $Root "tools\java\dev\lemonos\proxy\AccessRepositoryHarness
 $jdkRoot = if ($env:JAVA_HOME) { $env:JAVA_HOME } else { "C:\Program Files\Java\jdk-26.0.1" }
 if (Test-Path -LiteralPath $classes) { Remove-Item -LiteralPath $classes -Recurse -Force }
 New-Item -ItemType Directory -Path $classes -Force | Out-Null
+$generatedVersionSource = Join-Path $classes "generated\dev\lemonos\common\LemonOSBuildVersion.java"
+& (Join-Path $Root "tools\write_version_source.ps1") -Root $Root -OutputPath $generatedVersionSource | Out-Null
 & (Join-Path $jdkRoot "bin\javac.exe") -encoding UTF-8 -cp $velocityJar -d $classes `
+    $generatedVersionSource `
     (Join-Path $Root "src_proxy\dev\lemonos\common\LemonOS.java") `
     (Join-Path $Root "src_proxy\dev\lemonos\common\AdminProtocol.java") `
     $repositoryPath $harness

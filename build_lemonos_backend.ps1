@@ -16,6 +16,10 @@ $SourceRoot = Join-Path $Root "src\main\java"
 $Resources = Join-Path $Root "src\main\resources"
 $OutputDir = Join-Path $Root "build\libs"
 $OutputJar = Join-Path $OutputDir "lemonos.jar"
+$ReleaseVersion = (Get-Content -Raw -LiteralPath (Join-Path $Root "VERSION")).Trim()
+if ($ReleaseVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+    throw "VERSION is not a supported semantic version: $ReleaseVersion"
+}
 
 if (Test-Path -LiteralPath $Classes) {
     Remove-Item -LiteralPath $Classes -Recurse -Force
@@ -48,6 +52,9 @@ if ($LASTEXITCODE -ne 0) {
     throw "Backend javac failed with exit code $LASTEXITCODE"
 }
 Copy-Item -Path (Join-Path $Resources "*") -Destination $Classes -Recurse -Force
+$PluginDescriptor = Join-Path $Classes "plugin.yml"
+$PluginDescriptorContent = (Get-Content -Raw -LiteralPath $PluginDescriptor).Replace('${LEMONOS_VERSION}', $ReleaseVersion)
+Set-Content -LiteralPath $PluginDescriptor -Value $PluginDescriptorContent -Encoding ASCII -NoNewline
 $SourceSnapshot = (& (Join-Path $Root "tools\get_source_snapshot.ps1") -Root $Root).Trim()
 Set-Content -LiteralPath (Join-Path $Classes "lemonos-build.properties") -Value "sourceSnapshotSha256=$SourceSnapshot" -Encoding ASCII
 & $Jar --create --file $OutputJar -C $Classes .

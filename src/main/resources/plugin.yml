@@ -1,5 +1,5 @@
 name: lemonos
-version: 1.0
+version: '${LEMONOS_VERSION}'
 main: dev.lemonos.LemonOSPlugin
 api-version: '1.21'
 depend:

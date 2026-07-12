@@ -62,3 +62,14 @@ The deployment tools refuse to reset or replace LemonOS files while known Honey 
 ## Continuous integration
 
 GitHub Actions runs dependency verification, all contracts, the standalone backend/proxy build, isolated runtime integration tests, migration staging, and patch-hygiene checks on pushes and pull requests. Successful runs publish both JARs as short-lived workflow artifacts.
+
+## Releases
+
+`VERSION` is the single source for the Paper descriptor, Velocity descriptor, and proxy runtime version. To publish a release, update `VERSION` through a pull request and push the matching tag after it merges:
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The release workflow rejects mismatched tags, reruns all validation, and publishes both JARs with `SHA256SUMS.txt` to GitHub Releases.

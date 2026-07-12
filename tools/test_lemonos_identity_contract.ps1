@@ -18,7 +18,7 @@ $messagesTemplate = Get-Content -Raw -LiteralPath (Join-Path $Root "templates\ru
 
 foreach ($required in @(
     "name: lemonos",
-    "version: 1.0",
+    'version: ''${LEMONOS_VERSION}''',
     "main: dev.lemonos.LemonOSPlugin",
     "lemonos.admin:",
     "default: op"
@@ -31,7 +31,7 @@ foreach ($required in @(
 foreach ($required in @(
     '"id": "lemonos_proxy"',
     '"name": "lemonos_proxy"',
-    '"version": "1.0"',
+    '"version": "${LEMONOS_VERSION}"',
     '"main": "dev.lemonos.proxy.LemonOSProxyPlugin"'
 )) {
     if (-not $proxy.Contains($required)) {
@@ -40,7 +40,7 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    'RELEASE_VERSION = "1.0"',
+    'RELEASE_VERSION = LemonOSBuildVersion.VERSION',
     'PROTOCOL_VERSION = "2.0"',
     'DATA_SCHEMA_VERSION = "2.0"',
     'ACCESS_SCHEMA_VERSION = "3.0"',
