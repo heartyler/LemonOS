@@ -178,9 +178,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
@@ -632,6 +630,8 @@ PluginMessageListener {
         this.getServer().getMessenger().registerIncomingPluginChannel((Plugin)this, ADMIN_CHANNEL, (PluginMessageListener)this);
         Bukkit.getPluginManager().registerEvents((Listener)this, (Plugin)this);
         Bukkit.getPluginManager().registerEvents(new BackendWorldProtectionListener(this.worldPolicy), (Plugin)this);
+        Bukkit.getPluginManager().registerEvents(new BackendActivityTelemetryListener(
+                this.chainBreaks::contains, this::monotonicMillis, this::recordActivity), (Plugin)this);
         this.applyWorldRules();
         this.startAvailabilityChecks();
         this.startAuraTask();
@@ -924,37 +924,6 @@ PluginMessageListener {
             return;
         }
         this.harvestVerticalAutoPlant(blockBreakEvent.getBlock(), player);
-    }
-
-    @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
-    public void onActivityBlockBreak(BlockBreakEvent blockBreakEvent) {
-        Player player = blockBreakEvent.getPlayer();
-        if (this.chainBreaks.contains(player.getUniqueId())) {
-            return;
-        }
-        this.recordActivity(player, "break-blocks", 1, this.monotonicMillis());
-    }
-
-    @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
-    public void onActivityBlockPlace(BlockPlaceEvent blockPlaceEvent) {
-        this.recordActivity(blockPlaceEvent.getPlayer(), "place-blocks", 1, this.monotonicMillis());
-    }
-
-    @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
-    public void onActivityPickup(EntityPickupItemEvent entityPickupItemEvent) {
-        Entity entity = entityPickupItemEvent.getEntity();
-        if (entity instanceof Player player) {
-            this.recordActivity(player, "pickup-items", Math.max(1, entityPickupItemEvent.getItem().getItemStack().getAmount()), this.monotonicMillis());
-        }
-    }
-
-    @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
-    public void onActivityCraft(CraftItemEvent craftItemEvent) {
-        HumanEntity humanEntity = craftItemEvent.getWhoClicked();
-        if (humanEntity instanceof Player player) {
-            ItemStack itemStack = craftItemEvent.getRecipe() == null ? null : craftItemEvent.getRecipe().getResult();
-            this.recordActivity(player, "craft-items", itemStack == null ? 1 : Math.max(1, itemStack.getAmount()), this.monotonicMillis());
-        }
     }
 
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
