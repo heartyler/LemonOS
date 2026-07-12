@@ -1,0 +1,50 @@
+name: LemonOS CI
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 26
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+
+      - name: Restore pinned test dependencies
+        shell: powershell
+        run: .\tools\restore_test_dependencies.ps1
+
+      - name: Run LemonOS contracts
+        shell: powershell
+        run: .\tools\run_lemonos_contracts.ps1
+
+      - name: Build backend and proxy
+        shell: powershell
+        run: .\build_lemonos.ps1
+
+      - name: Check patch hygiene
+        shell: powershell
+        run: git diff --check
+
+      - name: Upload LemonOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lemonos-${{ github.sha }}
+          path: |
+            build/libs/lemonos.jar
+            build/libs/lemonos_proxy.jar
+          if-no-files-found: error
+          retention-days: 14

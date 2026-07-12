@@ -14,7 +14,7 @@ LemonOS is the backend and Velocity integration layer used by the Honey Minecraf
 
 - Windows PowerShell
 - JDK 26
-- A Honey 26.2 development runtime containing Paper and Velocity dependencies
+- Network access for the pinned compile-time dependency restore
 
 Restore the small compile-time test dependencies after a fresh clone:
 
@@ -33,9 +33,7 @@ Run the behavioral and source contracts:
 Build both artifacts and run the legacy-config migration staging check:
 
 ```powershell
-.\build_lemonos.ps1 `
-  -RuntimeRoot 'C:\path\to\honey-26.2-dev' `
-  -JdkRoot 'C:\Program Files\Java\jdk-26.0.1'
+.\build_lemonos.ps1 -JdkRoot 'C:\Program Files\Java\jdk-26.0.1'
 ```
 
 Generated artifacts:
@@ -54,3 +52,7 @@ Runtime reset and deployment tools require an offline Honey runtime with a valid
 ```
 
 The deployment tools refuse to reset or replace LemonOS files while known Honey runtime ports are active.
+
+## Continuous integration
+
+GitHub Actions runs dependency verification, all contracts, the standalone backend/proxy build, migration staging, and patch-hygiene checks on pushes and pull requests. Successful runs publish both JARs as short-lived workflow artifacts.

@@ -9,7 +9,7 @@ $Manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
 $TargetRoot = Join-Path $Root "third_party\runtime"
 New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
 
-foreach ($product in @("Paper", "Velocity")) {
+foreach ($product in @("Paper API", "Velocity", "Floodgate Spigot", "JOML", "BungeeCord Chat")) {
     $artifact = @($Manifest.artifacts | Where-Object product -eq $product)
     if ($artifact.Count -ne 1) { throw "Pinned artifact is missing or ambiguous: $product" }
     $target = Join-Path $TargetRoot $artifact[0].runtimeFile

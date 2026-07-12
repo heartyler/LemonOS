@@ -45,8 +45,8 @@ foreach ($required in @(
         throw "Sandbox prompt default/migration missing: $required"
     }
 }
-if ($messages -notmatch '(?m)^  use-basic-tool: "Use wooden axe\."$' -or
-    $messages -notmatch '(?m)^  use-more-tool: "Use wooden hoe\."$') {
+if ($messages -notmatch '(?m)^  use-basic-tool: "Use wooden axe\."\r?$' -or
+    $messages -notmatch '(?m)^  use-more-tool: "Use wooden hoe\."\r?$') {
     throw "Canonical Sandbox prompt template is missing."
 }
 

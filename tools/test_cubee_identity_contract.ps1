@@ -53,10 +53,8 @@ if (-not $adminProtocol.Contains('OPEN_CUBEE = "open-cubee"')) {
     throw "Proxy protocol does not declare canonical open-cubee."
 }
 
-$deployPath = Join-Path (Split-Path -Parent $Root) "tools\deploy_honey_26_2.ps1"
-$deploy = Get-Content -Raw -LiteralPath $deployPath
 $initializer = Get-Content -Raw -LiteralPath (Join-Path $Root "tools\initialize_lemonos_runtime.ps1")
-if ($deploy -match '(?i)honeypad' -or $initializer -notmatch 'templates\\runtime') {
+if ($initializer -match '(?i)honeypad' -or $initializer -notmatch 'templates\\runtime') {
     throw "Fresh runtime initialization must use canonical Cubee templates without legacy cutover logic."
 }
 
