@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory = $true)][string]$RuntimeRoot,
+    [string]$RuntimeRoot,
     [string]$JdkRoot = $env:JAVA_HOME
 )
 
@@ -12,9 +12,6 @@ if ([string]::IsNullOrWhiteSpace($JdkRoot)) {
 $Java = Join-Path $JdkRoot "bin\javac.exe"
 $Jar = Join-Path $JdkRoot "bin\jar.exe"
 $Classes = Join-Path $Root "build\classes"
-$Lib = Join-Path $RuntimeRoot "lobby\libraries"
-$PluginDir = Join-Path $RuntimeRoot "lobby\plugins"
-$VelocityPluginDir = Join-Path $RuntimeRoot "velocity\plugins"
 $SourceRoot = Join-Path $Root "src\main\java"
 $Resources = Join-Path $Root "src\main\resources"
 $OutputDir = Join-Path $Root "build\libs"
@@ -30,9 +27,20 @@ New-Item -ItemType Directory -Path $Classes | Out-Null
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 
 $Classpath = @()
-$Classpath += Get-ChildItem -Path $Lib -Recurse -Filter "*.jar" | ForEach-Object FullName
-$Classpath += Get-ChildItem -Path $PluginDir -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
-$Classpath += Get-ChildItem -Path $VelocityPluginDir -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
+if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
+    $DependencyRoot = Join-Path $Root "third_party\runtime"
+    $Classpath += Get-ChildItem -Path $DependencyRoot -File -Filter "*.jar" | ForEach-Object FullName
+    foreach ($required in @("paper-api-26.2.build.56-alpha.jar", "velocity.jar", "floodgate-spigot.jar", "joml-1.10.8.jar", "bungeecord-chat-1.21-R0.2-deprecated+build.21.jar")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $DependencyRoot $required) -PathType Leaf)) {
+            throw "Standalone dependency missing: $required. Run tools\restore_test_dependencies.ps1."
+        }
+    }
+} else {
+    $RuntimeRoot = (Resolve-Path -LiteralPath $RuntimeRoot).Path
+    $Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "lobby\libraries") -Recurse -Filter "*.jar" | ForEach-Object FullName
+    $Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "lobby\plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
+    $Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "velocity\plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
+}
 
 $Sources = Get-ChildItem -Path $SourceRoot -Recurse -Filter "*.java" | ForEach-Object FullName
 & $Java -encoding UTF-8 -cp ($Classpath -join ";") -d $Classes $Sources

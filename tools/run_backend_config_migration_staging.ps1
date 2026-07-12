@@ -1,11 +1,10 @@
 param(
-    [Parameter(Mandatory = $true)][string]$RuntimeRoot,
+    [string]$RuntimeRoot,
     [string]$JdkRoot = $env:JAVA_HOME
 )
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$RuntimeRoot = (Resolve-Path -LiteralPath $RuntimeRoot).Path
 if ([string]::IsNullOrWhiteSpace($JdkRoot)) { throw "JdkRoot is required." }
 $Classes = Join-Path $Root "build\classes"
 if (-not (Test-Path -LiteralPath (Join-Path $Classes "dev\lemonos\BackendConfigMigrationService.class"))) {
@@ -15,9 +14,14 @@ $HarnessClasses = Join-Path $Root "build\test-config-migration"
 if (Test-Path -LiteralPath $HarnessClasses) { Remove-Item -LiteralPath $HarnessClasses -Recurse -Force }
 New-Item -ItemType Directory -Path $HarnessClasses -Force | Out-Null
 $Classpath = @($Classes)
-$Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "lobby\libraries") -Recurse -Filter "*.jar" | ForEach-Object FullName
-$Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "lobby\plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
-$Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "velocity\plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
+if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
+    $Classpath += Get-ChildItem -Path (Join-Path $Root "third_party\runtime") -File -Filter "*.jar" | ForEach-Object FullName
+} else {
+    $RuntimeRoot = (Resolve-Path -LiteralPath $RuntimeRoot).Path
+    $Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "lobby\libraries") -Recurse -Filter "*.jar" | ForEach-Object FullName
+    $Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "lobby\plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
+    $Classpath += Get-ChildItem -Path (Join-Path $RuntimeRoot "velocity\plugins") -Recurse -Filter "*.jar" | Where-Object Name -NotLike "lemonos*.jar" | ForEach-Object FullName
+}
 $ClasspathText = $Classpath -join ";"
 $Harness = Join-Path $Root "tools\java\dev\lemonos\BackendConfigMigrationStagingHarness.java"
 & (Join-Path $JdkRoot "bin\javac.exe") -encoding UTF-8 -cp $ClasspathText -d $HarnessClasses $Harness
