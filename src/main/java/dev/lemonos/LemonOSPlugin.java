@@ -120,7 +120,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -259,7 +258,6 @@ PluginMessageListener {
     private final NamespacedKey stayedCloseDisplayKey = new NamespacedKey((Plugin)this, "stayed_close_display");
     private final Object hudIoLock = new Object();
     private final Map<UUID, SavedInventory> authInventories = new HashMap<UUID, SavedInventory>();
-    private final Map<ServerId, Boolean> serverAvailability = new ConcurrentHashMap<ServerId, Boolean>();
     private final Set<UUID> authLocked = ConcurrentHashMap.newKeySet();
     private final Set<UUID> authenticatedIdentities = ConcurrentHashMap.newKeySet();
     private final Map<UUID, IdentityInput> pendingIdentityInputs = new ConcurrentHashMap<UUID, IdentityInput>();
@@ -333,7 +331,7 @@ PluginMessageListener {
     private boolean boardsConfigDirty;
     private boolean atmosphereConfigDirty;
     private BackendFeatureConfigMigrationService featureConfigMigrationService;
-    private BukkitTask availabilityTask;
+    private BackendPlaceRuntimeLifecycleService placeRuntimeLifecycleService;
     private BukkitTask auraTask;
     private BukkitTask adminCommandTask;
     private BukkitTask careRequestTask;
@@ -365,7 +363,6 @@ PluginMessageListener {
     private ServerId currentServer;
     private BackendRuntimeLayout runtimeLayout;
     private BackendServerPortResolver serverPortResolver;
-    private final Map<ServerId, Integer> serverPorts = new EnumMap<ServerId, Integer>(ServerId.class);
     private BackendYamlStore yamlStore;
     private BackendConfigMigrationService configMigrationService;
     private BackendConfigBootstrapService configBootstrapService;
@@ -385,6 +382,7 @@ PluginMessageListener {
     private BackendPlaceStatusService placeStatusService;
     private BackendPlaceRuntimeStatusService placeRuntimeStatusService;
     private BackendPlaceAvailabilityService<ServerId> placeAvailabilityService;
+    private BackendPlaceRuntimeService<ServerId> placeRuntimeService;
     private BackendChunkSettingsService chunkSettingsService;
     private BackendHudDataService hudDataService;
     private BackendHudDisplayService hudDisplayService;
@@ -513,6 +511,8 @@ PluginMessageListener {
         this.placeStatusService = new BackendPlaceStatusService();
         this.placeRuntimeStatusService = new BackendPlaceRuntimeStatusService(this.placeStatusService);
         this.placeAvailabilityService = new BackendPlaceAvailabilityService<ServerId>(this.placeRuntimeStatusService);
+        this.placeRuntimeService = new BackendPlaceRuntimeService<ServerId>(this.placeAvailabilityService::canConnect);
+        this.placeRuntimeLifecycleService = new BackendPlaceRuntimeLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("place-runtime", exception));
         this.chunkSettingsService = new BackendChunkSettingsService();
         this.hudDataService = new BackendHudDataService();
         this.hudDisplayService = new BackendHudDisplayService();
@@ -607,7 +607,7 @@ PluginMessageListener {
         this.adminGamemodeClickService = new BackendAdminGamemodeClickService();
         this.adminPlayerClickService = new BackendAdminPlayerClickService();
         this.adminPlayerControlClickService = new BackendAdminPlayerControlClickService();
-        this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), serverId -> this.canConnect(this.serverPort(serverId)), this::finishTravel);
+        this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), this.placeRuntimeService::canConnect, this::finishTravel);
         this.travelStartService = new BackendTravelStartService<ServerId>((Plugin)this, this.travelStateService, this::isBusy, this::isServerAvailable, this::isPlaceWakeable, this::startWakeTravel, this::finishTravel);
         this.identityTransferService = new BackendIdentityTransferService();
         this.identitySessionService = new BackendIdentitySessionService();
@@ -638,7 +638,6 @@ PluginMessageListener {
         this.recoverStaleResetRequests();
         this.recoverRuntimeState();
         this.knownResetRequests.addAll(this.resetRequestTokens());
-        this.placeAvailabilityService.initialize(this.serverAvailability, List.of(ServerId.values()), this.currentServer);
         this.getServer().getMessenger().registerOutgoingPluginChannel((Plugin)this, BUNGEE_CHANNEL);
         this.getServer().getMessenger().registerOutgoingPluginChannel((Plugin)this, ADMIN_CHANNEL);
         this.getServer().getMessenger().registerIncomingPluginChannel((Plugin)this, ADMIN_CHANNEL, (PluginMessageListener)this);
@@ -695,9 +694,7 @@ PluginMessageListener {
         if (this.accessLegacyService != null) {
             this.accessLegacyService.cancelPendingRequests();
         }
-        if (this.availabilityTask != null) {
-            this.availabilityTask.cancel();
-        }
+        if (this.placeRuntimeLifecycleService != null) this.placeRuntimeLifecycleService.stop();
         if (this.adminCommandTask != null) {
             this.adminCommandTask.cancel();
         }
@@ -8904,8 +8901,9 @@ PluginMessageListener {
     }
 
     private void startAvailabilityChecks() {
+        this.placeRuntimeLifecycleService.stop();
         this.refreshAvailability();
-        this.availabilityTask = Bukkit.getScheduler().runTaskTimerAsynchronously((Plugin)this, this::refreshAvailability, 100L, 100L);
+        this.placeRuntimeLifecycleService.start(100L, 100L, this::refreshAvailability);
     }
 
     private void startAuraTask() {
@@ -8947,19 +8945,11 @@ PluginMessageListener {
 
     private void refreshAvailability() {
         this.reloadPlaces();
-        this.placeAvailabilityService.refresh(this.serverAvailability, List.of(ServerId.values()), this.currentServer, this::serverPort);
-    }
-
-    private boolean canConnect(int n) {
-        return this.placeAvailabilityService.canConnect(n);
-    }
-
-    private int serverPort(ServerId serverId) {
-        return this.serverPorts.getOrDefault(serverId, serverId.defaultPort);
+        this.placeRuntimeService.refresh(List.of(ServerId.values()), this.currentServer);
     }
 
     private boolean isServerAvailable(ServerId serverId) {
-        return this.placeAvailabilityService.available(this.serverAvailability, serverId, this.currentServer);
+        return this.placeRuntimeService.available(serverId, this.currentServer);
     }
 
     private boolean isServerReady(ServerId serverId) {
@@ -11802,13 +11792,16 @@ PluginMessageListener {
         for (String diagnostic : resolution.diagnostics()) {
             this.getLogger().warning("LemonOS runtime port resolution: " + diagnostic);
         }
-        for (ServerId serverId : ServerId.values()) {
-            this.serverPorts.put(serverId, resolution.ports().getOrDefault(serverId.proxyName, serverId.defaultPort));
+        try {
+            return this.placeRuntimeService.configure(
+                    resolution,
+                    List.of(ServerId.values()),
+                    serverId -> serverId.proxyName,
+                    serverId -> serverId.defaultPort);
         }
-        for (ServerId serverId : ServerId.values()) {
-            if (serverId.proxyName.equals(resolution.currentServer())) return serverId;
+        catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("LemonOS cannot identify backend on port " + this.getServer().getPort() + ". Check honey.yml servers.*.port.", exception);
         }
-        throw new IllegalStateException("LemonOS cannot identify backend on port " + this.getServer().getPort() + ". Check honey.yml servers.*.port.");
     }
 
     private static enum ServerId {
