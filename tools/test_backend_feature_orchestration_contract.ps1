@@ -14,7 +14,7 @@ foreach ($snippet in @(
     "RankingSource rankingSource",
     "boolean usesPlaytime()"
 )) {
-    if (-not $Definition.Contains($snippet)) { throw "Board definition boundary missing: $snippet" }
+    if (-not $Definition.Contains($snippet)) { throw "HUD definition boundary missing: $snippet" }
 }
 
 foreach ($snippet in @(

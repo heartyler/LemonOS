@@ -80,7 +80,6 @@ final class BackendHudConfigMigrationService {
 
     private boolean migrateGeneratedDefaults(FileConfiguration config, Hud hud, String displayPath) {
         boolean changed = false;
-        String configPath = hud.configPath();
         if ("made-room".equals(hud.dataKey())) {
             if (this.positionMatches(config, displayPath, 9.20, -60.86, 0.5)) {
                 this.applyDisplayBlueprintDefaults(config, hud, displayPath);
