@@ -120,6 +120,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -152,6 +153,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
+import org.bukkit.Registry;
+import org.bukkit.SoundCategory;
 import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -344,6 +347,7 @@ PluginMessageListener {
     private BukkitTask tabTask;
     private BackendBoardLifecycleService boardLifecycleService;
     private BackendAtmosphereLifecycleService atmosphereLifecycleService;
+    private BackendAtmosphereMusicLifecycleService atmosphereMusicLifecycleService;
     private BackendBoardOrchestrationService boardOrchestrationService;
     private BackendBoardChunkLeaseService boardChunkLeaseService;
     private BackendWorldPolicy worldPolicy;
@@ -351,6 +355,7 @@ PluginMessageListener {
     private BackendFirstJoinSpawnService firstJoinSpawnService;
     private volatile Location lobbyFirstJoinSpawn;
     private BackendAtmosphereOrchestrationService atmosphereOrchestrationService;
+    private BackendAtmosphereMusicOrchestrationService atmosphereMusicOrchestrationService;
     private ZoneId tabTimeZone = ZoneId.of("Asia/Bangkok");
     private DateTimeFormatter tabTimeFormatter = DateTimeFormatter.ofPattern("EEEdd HH:mm", Locale.ENGLISH);
     private long actionBarHeartbeatNanos;
@@ -359,6 +364,8 @@ PluginMessageListener {
     private final Map<String, Long> operationErrorLogNanos = new ConcurrentHashMap<String, Long>();
     private ServerId currentServer;
     private BackendRuntimeLayout runtimeLayout;
+    private BackendServerPortResolver serverPortResolver;
+    private final Map<ServerId, Integer> serverPorts = new EnumMap<ServerId, Integer>(ServerId.class);
     private BackendYamlStore yamlStore;
     private BackendConfigMigrationService configMigrationService;
     private BackendConfigBootstrapService configBootstrapService;
@@ -483,6 +490,7 @@ PluginMessageListener {
     public void onEnable() {
         this.getLogger().info("LemonOS build " + this.buildSourceSnapshot());
         this.runtimeLayout = BackendRuntimeLayout.resolve();
+        this.serverPortResolver = new BackendServerPortResolver();
         this.yamlStore = new BackendYamlStore();
         this.actionBarCoordinator = new BackendActionBarCoordinator();
         this.configMigrationService = new BackendConfigMigrationService();
@@ -525,8 +533,10 @@ PluginMessageListener {
         this.activityMessageService = new BackendActivityMessageService();
         this.boardLifecycleService = new BackendBoardLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("boards", exception));
         this.atmosphereLifecycleService = new BackendAtmosphereLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("atmosphere", exception));
+        this.atmosphereMusicLifecycleService = new BackendAtmosphereMusicLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("music", exception));
         this.boardOrchestrationService = new BackendBoardOrchestrationService();
         this.atmosphereOrchestrationService = new BackendAtmosphereOrchestrationService();
+        this.atmosphereMusicOrchestrationService = new BackendAtmosphereMusicOrchestrationService();
         this.sandboxDrawingSessionService = new BackendSandboxDrawingSessionService();
         this.sandboxHistoryService = new BackendSandboxHistoryService();
         this.sandboxPreviewService = new BackendSandboxPreviewService();
@@ -597,7 +607,7 @@ PluginMessageListener {
         this.adminGamemodeClickService = new BackendAdminGamemodeClickService();
         this.adminPlayerClickService = new BackendAdminPlayerClickService();
         this.adminPlayerControlClickService = new BackendAdminPlayerControlClickService();
-        this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), serverId -> this.canConnect(serverId.port), this::finishTravel);
+        this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), serverId -> this.canConnect(this.serverPort(serverId)), this::finishTravel);
         this.travelStartService = new BackendTravelStartService<ServerId>((Plugin)this, this.travelStateService, this::isBusy, this::isServerAvailable, this::isPlaceWakeable, this::startWakeTravel, this::finishTravel);
         this.identityTransferService = new BackendIdentityTransferService();
         this.identitySessionService = new BackendIdentitySessionService();
@@ -644,6 +654,7 @@ PluginMessageListener {
         this.startChainStatusTask();
         this.startCareWorldStatusTask();
         this.startAtmosphereTask();
+        this.startAtmosphereMusicTask();
         this.startActionBarRenderTask();
         this.startPendingOperationWatchdog();
         this.startRestTask();
@@ -716,6 +727,7 @@ PluginMessageListener {
             this.careWorldStatusTask.cancel();
         }
         if (this.atmosphereLifecycleService != null) this.atmosphereLifecycleService.stop();
+        if (this.atmosphereMusicLifecycleService != null) this.atmosphereMusicLifecycleService.stop();
         if (this.restTask != null) {
             this.restTask.cancel();
         }
@@ -8935,11 +8947,15 @@ PluginMessageListener {
 
     private void refreshAvailability() {
         this.reloadPlaces();
-        this.placeAvailabilityService.refresh(this.serverAvailability, List.of(ServerId.values()), this.currentServer, this.places, serverId -> serverId.proxyName, serverId -> serverId.port);
+        this.placeAvailabilityService.refresh(this.serverAvailability, List.of(ServerId.values()), this.currentServer, this::serverPort);
     }
 
     private boolean canConnect(int n) {
         return this.placeAvailabilityService.canConnect(n);
+    }
+
+    private int serverPort(ServerId serverId) {
+        return this.serverPorts.getOrDefault(serverId, serverId.defaultPort);
     }
 
     private boolean isServerAvailable(ServerId serverId) {
@@ -9826,6 +9842,16 @@ PluginMessageListener {
         this.atmosphereLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks(), () -> this.runActionBarProducer("atmosphere", this::tickAtmosphere));
     }
 
+    private void startAtmosphereMusicTask() {
+        this.atmosphereMusicLifecycleService.stop();
+        BackendAtmosphereMusicOrchestrationService.Schedule schedule = this.atmosphereMusicOrchestrationService.schedule(this.currentServer == ServerId.LOBBY, this.atmosphereMusicEnabled());
+        if (!schedule.active()) {
+            this.stopAllAtmosphereMusic();
+            return;
+        }
+        this.atmosphereMusicLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks(), () -> this.runActionBarProducer("music", () -> this.tickAtmosphereMusic(this.monotonicMillis())));
+    }
+
     private void tickAtmosphere() {
         if (!this.atmosphereOrchestrationService.shouldTick(this.atmosphereConfig, this.resting(), this.restSuspendAtmosphere())) return;
         long l = this.monotonicMillis();
@@ -9844,7 +9870,6 @@ PluginMessageListener {
         this.showPeriodicAtmosphere(l);
         this.tickActivitySessions(l);
         this.repeatAtmosphere(l);
-        this.tickAtmosphereMusic(l);
     }
 
     private void showPeriodicAtmosphere(long l) {
@@ -9882,7 +9907,7 @@ PluginMessageListener {
     }
 
     private void tickAtmosphereMusic(long l) {
-        if (!this.atmosphereMusicEnabled() || this.currentServer != ServerId.LOBBY) {
+        if (!this.atmosphereMusicOrchestrationService.shouldTick(this.currentServer == ServerId.LOBBY, this.atmosphereMusicEnabled())) {
             this.stopAllAtmosphereMusic();
             return;
         }
@@ -9892,6 +9917,7 @@ PluginMessageListener {
                 this.stopAtmosphereMusic(player);
                 continue;
             }
+            this.suppressVanillaMusic(player);
             arrayList.add(player);
         }
         if (arrayList.isEmpty()) {
@@ -9928,15 +9954,7 @@ PluginMessageListener {
     }
 
     private List<String> atmosphereMusicTracks(String string) {
-        if (this.config == null) {
-            return List.of();
-        }
-        ArrayList<String> arrayList = new ArrayList<String>();
-        for (String string2 : this.config.getStringList("atmosphere.music.tracks." + string)) {
-            if (string2 == null || string2.isBlank()) continue;
-            arrayList.add(string2.trim());
-        }
-        return arrayList;
+        return this.atmosphereConfig.musicTracks(string);
     }
 
     private boolean playAtmosphereMusic(Player player, BackendAtmosphereMusicService.Track atmosphereTrack) {
@@ -9945,14 +9963,39 @@ PluginMessageListener {
         if (f <= 0.0f || atmosphereTrack.sound() == null || atmosphereTrack.sound().isBlank()) {
             return false;
         }
+        if (!this.isAtmosphereMusicSoundAvailable(atmosphereTrack.sound())) {
+            this.logOperationFailure("music-invalid-" + atmosphereTrack.sound(), "LemonOS skipped unavailable atmosphere music '" + atmosphereTrack.sound() + "'.");
+            return false;
+        }
         try {
-            player.playSound((Entity)player, atmosphereTrack.sound(), f, f2);
+            player.playSound((Entity)player, atmosphereTrack.sound(), SoundCategory.RECORDS, f, f2);
             this.showAtmosphereMusicActionBar(player, atmosphereTrack);
             return true;
         }
         catch (RuntimeException runtimeException) {
-            this.getLogger().warning("LemonOS atmosphere music '" + atmosphereTrack.sound() + "' is unavailable.");
+            this.logOperationFailure("music-play-" + atmosphereTrack.sound(), "LemonOS recovered atmosphere music '" + atmosphereTrack.sound() + "': " + runtimeException.getMessage());
             return false;
+        }
+    }
+
+    private boolean isAtmosphereMusicSoundAvailable(String sound) {
+        if (sound == null || sound.isBlank()) {
+            return false;
+        }
+        String value = sound.indexOf(':') >= 0 ? sound : "minecraft:" + sound;
+        NamespacedKey key = NamespacedKey.fromString(value);
+        if (key == null) {
+            return false;
+        }
+        return !NamespacedKey.MINECRAFT.equals(key.getNamespace()) || Registry.SOUNDS.get(key) != null;
+    }
+
+    private void suppressVanillaMusic(Player player) {
+        try {
+            player.stopSound(SoundCategory.MUSIC);
+        }
+        catch (RuntimeException runtimeException) {
+            this.logOperationFailure("music-vanilla-stop-" + player.getUniqueId(), "LemonOS could not suppress Vanilla music for " + player.getName() + ": " + runtimeException.getMessage());
         }
     }
 
@@ -10089,11 +10132,11 @@ PluginMessageListener {
         }
         try {
             for (String string : hashSet) {
-                player.stopSound(string);
+                player.stopSound(string, SoundCategory.RECORDS);
             }
         }
         catch (RuntimeException runtimeException) {
-            // Older sound keys are best-effort; the next server tick will continue normally.
+            this.logOperationFailure("music-stop-" + player.getUniqueId(), "LemonOS recovered atmosphere music cleanup for " + player.getName() + ": " + runtimeException.getMessage());
         }
     }
 
@@ -11755,17 +11798,17 @@ PluginMessageListener {
     }
 
     private ServerId detectServer() {
-        int n = this.getServer().getPort();
-        if (n == 30066) {
-            return ServerId.LOBBY;
+        BackendServerPortResolver.Resolution resolution = this.serverPortResolver.resolve(this.honeyRoot(), this.getServer().getPort());
+        for (String diagnostic : resolution.diagnostics()) {
+            this.getLogger().warning("LemonOS runtime port resolution: " + diagnostic);
         }
-        if (n == 25565 || n == 30067) {
-            return ServerId.SURVIVAL;
+        for (ServerId serverId : ServerId.values()) {
+            this.serverPorts.put(serverId, resolution.ports().getOrDefault(serverId.proxyName, serverId.defaultPort));
         }
-        if (n == 30068) {
-            return ServerId.CREATIVE;
+        for (ServerId serverId : ServerId.values()) {
+            if (serverId.proxyName.equals(resolution.currentServer())) return serverId;
         }
-        return ServerId.LOBBY;
+        throw new IllegalStateException("LemonOS cannot identify backend on port " + this.getServer().getPort() + ". Check honey.yml servers.*.port.");
     }
 
     private static enum ServerId {
@@ -11776,13 +11819,13 @@ PluginMessageListener {
         private final String proxyName;
         private final String label;
         private final String lore;
-        private final int port;
+        private final int defaultPort;
 
         private ServerId(String string2, String string3, String string4, int n2) {
             this.proxyName = string2;
             this.label = string3;
             this.lore = string4;
-            this.port = n2;
+            this.defaultPort = n2;
         }
     }
 

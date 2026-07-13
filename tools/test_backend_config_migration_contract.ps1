@@ -49,7 +49,10 @@ foreach ($snippet in $requiredPluginSnippets) {
 foreach ($snippet in @(
     "final class BackendConfigMigrationOrchestrator",
     "LegacyDefaultResult legacy = legacyDefaults.apply();",
-    "this.save(target.configFile(), target.config(), legacy.configChanged());",
+    "boolean atmosphereSaved = this.save(",
+    'if (atmosphereSaved && target.config().contains("atmosphere"))',
+    "this.save(target.configFile(), target.config(), configChanged);",
+    "private boolean save(File file, FileConfiguration configuration, boolean changed)",
     "this.defaultGroupService.applyMessageDefaults(target.messages())"
 )) {
     if (-not $Orchestrator.Contains($snippet)) {

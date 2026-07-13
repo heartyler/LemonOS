@@ -27,14 +27,20 @@ final class BackendConfigMigrationOrchestrator {
 
     void migrate(Target target, LegacyDefaults legacyDefaults, List<BackendConfigDefaultGroupService.PlaceDefault> placeDefaults) {
         LegacyDefaultResult legacy = legacyDefaults.apply();
-        this.save(target.configFile(), target.config(), legacy.configChanged());
 
         boolean boardsChanged = this.featureMigrationService.migrateBoards(
                 target.config(), target.boards(), target.boardsFileCreated());
         boolean atmosphereChanged = this.featureMigrationService.migrateAtmosphere(
                 target.config(), target.atmosphere(), target.atmosphereFileCreated());
+        boolean atmosphereSaved = this.save(
+                target.atmosphereFile(), target.atmosphere(), atmosphereChanged || legacy.atmosphereChanged());
         this.save(target.boardsFile(), target.boards(), boardsChanged || legacy.boardsChanged());
-        this.save(target.atmosphereFile(), target.atmosphere(), atmosphereChanged || legacy.atmosphereChanged());
+        boolean configChanged = legacy.configChanged();
+        if (atmosphereSaved && target.config().contains("atmosphere")) {
+            target.config().set("atmosphere", null);
+            configChanged = true;
+        }
+        this.save(target.configFile(), target.config(), configChanged);
 
         this.save(target.messagesFile(), target.messages(), this.defaultGroupService.applyMessageDefaults(target.messages()));
         this.save(target.placesFile(), target.places(), this.defaultGroupService.applyPlaceDefaults(target.places(), placeDefaults));
@@ -42,16 +48,21 @@ final class BackendConfigMigrationOrchestrator {
         this.save(target.survivalFile(), target.survival(), this.defaultGroupService.applySurvivalDefaults(target.survival()));
     }
 
-    private void save(File file, FileConfiguration configuration, boolean changed) {
-        if (!changed || file == null || configuration == null) {
-            return;
+    private boolean save(File file, FileConfiguration configuration, boolean changed) {
+        if (!changed) {
+            return true;
+        }
+        if (file == null || configuration == null) {
+            return false;
         }
         try {
             this.yamlStore.saveAtomic(configuration, file);
             this.logger.info("LemonOS config migration added missing defaults to " + file.getName() + ".");
+            return true;
         }
         catch (IOException exception) {
             this.logger.warning("Unable to save migrated LemonOS config file " + file.getName() + ": " + exception.getMessage());
+            return false;
         }
     }
 

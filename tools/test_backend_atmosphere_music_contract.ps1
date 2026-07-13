@@ -5,6 +5,9 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path -LiteralPath $Root).Path
 $servicePath = Join-Path $Root "src\main\java\dev\lemonos\BackendAtmosphereMusicService.java"
+$lifecyclePath = Join-Path $Root "src\main\java\dev\lemonos\BackendAtmosphereMusicLifecycleService.java"
+$orchestrationPath = Join-Path $Root "src\main\java\dev\lemonos\BackendAtmosphereMusicOrchestrationService.java"
+$configPath = Join-Path $Root "src\main\java\dev\lemonos\BackendAtmosphereConfig.java"
 $backendPath = Join-Path $Root "src\main\java\dev\lemonos\LemonOSPlugin.java"
 
 if (-not (Test-Path -LiteralPath $servicePath -PathType Leaf)) {
@@ -12,7 +15,16 @@ if (-not (Test-Path -LiteralPath $servicePath -PathType Leaf)) {
 }
 
 $service = Get-Content -Raw -LiteralPath $servicePath
+$lifecycle = Get-Content -Raw -LiteralPath $lifecyclePath
+$orchestration = Get-Content -Raw -LiteralPath $orchestrationPath
+$config = Get-Content -Raw -LiteralPath $configPath
 $backend = Get-Content -Raw -LiteralPath $backendPath
+
+if (-not $lifecycle.Contains("extends BackendRepeatingLifecycleService")) { throw "Lobby music does not own a lifecycle." }
+foreach ($required in @("Schedule schedule(boolean lobby, boolean musicEnabled)", "return lobby && musicEnabled", "boolean shouldTick(boolean lobby, boolean musicEnabled)")) {
+    if (-not $orchestration.Contains($required)) { throw "Lobby music orchestration missing: $required" }
+}
+if (-not $config.Contains('this.source.getStringList(ROOT + "music.tracks." + key)')) { throw "atmosphere.yml does not own music tracks." }
 
 foreach ($required in @(
     "final class BackendAtmosphereMusicService",
@@ -54,7 +66,12 @@ foreach ($required in @(
 
 foreach ($required in @(
     "private BackendAtmosphereMusicService atmosphereMusicService",
+    "private BackendAtmosphereMusicLifecycleService atmosphereMusicLifecycleService",
+    "private BackendAtmosphereMusicOrchestrationService atmosphereMusicOrchestrationService",
     "this.atmosphereMusicService = new BackendAtmosphereMusicService()",
+    "this.startAtmosphereMusicTask()",
+    "this.atmosphereMusicLifecycleService.stop()",
+    'this.atmosphereMusicLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks()',
     "this.atmosphereMusicService.reset()",
     "this.atmosphereMusicService.waitingForNextTrack(l, this.atmosphereMusicDelaySeconds())",
     "this.atmosphereMusicService.pickTrack(this.atmosphereMusicGroups())",
@@ -64,7 +81,12 @@ foreach ($required in @(
     "new BackendAtmosphereMusicService.Track(track, this.normalizeAtmosphereMusicSound(track), group, this.atmosphereMusicTrackSeconds(track))",
     "new BackendAtmosphereMusicService.Group(group, this.atmosphereMusicWeight(group), tracks)",
     "private boolean playAtmosphereMusic(Player player, BackendAtmosphereMusicService.Track atmosphereTrack)",
-    "player.playSound((Entity)player, atmosphereTrack.sound(), f, f2)",
+    "player.playSound((Entity)player, atmosphereTrack.sound(), SoundCategory.RECORDS, f, f2)",
+    "player.stopSound(SoundCategory.MUSIC)",
+    "player.stopSound(string, SoundCategory.RECORDS)",
+    "this.isAtmosphereMusicSoundAvailable(atmosphereTrack.sound())",
+    'this.logOperationFailure("music-play-" + atmosphereTrack.sound()',
+    'this.logOperationFailure("music-stop-" + player.getUniqueId()',
     "private void showAtmosphereMusicActionBar(Player player, BackendAtmosphereMusicService.Track atmosphereTrack)",
     "this.atmosphereMusicService.refreshActionBarTrack(l, this.atmosphereMusicActionBarRefreshTicks())",
     "this.atmosphereMusicService.actionBarResumeDelayed(uUID, this.monotonicMillis())",
@@ -86,7 +108,10 @@ foreach ($forbidden in @(
     "private boolean canUseAtmosphereMusicGroup",
     "private static final class LobbyMusicState",
     "private static final class AtmosphereTrack",
-    "ThreadLocalRandom.current().nextInt"
+    "ThreadLocalRandom.current().nextInt",
+    'this.config.getStringList("atmosphere.music.tracks.',
+    "player.playSound((Entity)player, atmosphereTrack.sound(), f, f2)",
+    "player.stopSound(string);"
 )) {
     if ($backend.Contains($forbidden)) {
         throw "LemonOSPlugin still owns atmosphere music state detail: $forbidden"

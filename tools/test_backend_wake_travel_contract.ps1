@@ -47,7 +47,7 @@ foreach ($required in @(
 
 foreach ($required in @(
     "private BackendWakeTravelService<ServerId> wakeTravelService",
-    "this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), serverId -> this.canConnect(serverId.port), this::finishTravel)",
+    "this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), serverId -> this.canConnect(this.serverPort(serverId)), this::finishTravel)",
     "private void startWakeTravel(Player player, ServerId serverId)",
     "this.wakeTravelService.start(player, serverId, this.restWakingStatus())"
 )) {
