@@ -289,8 +289,6 @@ PluginMessageListener {
     private final UUID resetOwnerInstance = UUID.randomUUID();
     private final BackendOperationRegistry<ServerId, ManualBackupOperation> backupOperations = new BackendOperationRegistry<>();
     private final Set<UUID> pendingActionBarStatuses = ConcurrentHashMap.newKeySet();
-    private final BackendOperationRegistry<UUID, AdminSendOperation> adminSendOperations = new BackendOperationRegistry<>();
-    private final AtomicLong adminSendGenerationCounter = new AtomicLong();
     private final BackendOperationRegistry<String, ChunkOperation> chunkOperations = new BackendOperationRegistry<>();
     private final AtomicLong chunkGenerationCounter = new AtomicLong();
     private final AtomicLong backupGenerationCounter = new AtomicLong();
@@ -383,6 +381,7 @@ PluginMessageListener {
     private BackendAccessLegacyService accessLegacyService;
     private BackendPluginMessageRouterService pluginMessageRouterService;
     private BackendAdminSendProtocolService adminSendProtocolService;
+    private BackendAdminSendService<ServerId> adminSendService;
     private BackendWakePlaceService wakePlaceService;
     private BackendPlaceStatusService placeStatusService;
     private BackendPlaceRuntimeStatusService placeRuntimeStatusService;
@@ -512,7 +511,8 @@ PluginMessageListener {
         this.identitySkinService = new BackendIdentitySkinService();
         this.openCubeeMessageService = new BackendOpenCubeeMessageService((Plugin)this, this::handleProxyOpenCubee);
         this.accessLegacyService = new BackendAccessLegacyService((Plugin)this, this::normalizeAccessName, this::updateProxyAdmin);
-        this.adminSendProtocolService = new BackendAdminSendProtocolService((Plugin)this, this::finishAdminSendResult);
+        this.adminSendProtocolService = new BackendAdminSendProtocolService((Plugin)this,
+                (actorId, targetId, place, operationId, result) -> this.adminSendService.finishResult(actorId, targetId, place, operationId, result));
         this.pluginMessageRouterService = new BackendPluginMessageRouterService(this.openCubeeMessageService, this.skinProtocolService, this.accessLegacyService, this.adminSendProtocolService);
         this.wakePlaceService = new BackendWakePlaceService((Plugin)this);
         this.placeStatusService = new BackendPlaceStatusService();
@@ -616,6 +616,38 @@ PluginMessageListener {
         this.adminPlayerControlClickService = new BackendAdminPlayerControlClickService();
         this.wakeTravelService = new BackendWakeTravelService<ServerId>((Plugin)this, this.travelStateService, this::sendWakePlaceRequest, (serverId, status) -> this.setPlaceRuntimeStatus(serverId, status), this.placeRuntimeService::canConnect, this::finishTravel);
         this.travelStartService = new BackendTravelStartService<ServerId>((Plugin)this, this.travelStateService, this::isBusy, this::isServerAvailable, this::isPlaceWakeable, this::startWakeTravel, this::finishTravel);
+        this.adminSendService = new BackendAdminSendService<ServerId>(
+                new BackendAdminSendService.Scheduler() {
+                    @Override
+                    public BukkitTask timer(Runnable runnable, long delayTicks, long periodTicks) {
+                        return Bukkit.getScheduler().runTaskTimer(LemonOSPlugin.this, runnable, delayTicks, periodTicks);
+                    }
+
+                    @Override
+                    public BukkitTask later(Runnable runnable, long delayTicks) {
+                        return Bukkit.getScheduler().runTaskLater(LemonOSPlugin.this, runnable, delayTicks);
+                    }
+                },
+                this::monotonicMillis,
+                Bukkit::getPlayer,
+                this::requireAdmin,
+                this.adminPeopleActionService::canTarget,
+                this::isServerAvailable,
+                this::isPlaceWakeable,
+                this::sendWakePlaceRequest,
+                this::setPlaceRuntimeStatus,
+                this::restWakingStatus,
+                this::saveIdentityTransfer,
+                this::clearIdentityTransfer,
+                this::currentServerSpawnLocation,
+                serverId -> serverId.proxyName,
+                (actor, targetId, destination, operationId) -> this.adminSendProtocolService.send(actor, targetId, destination.proxyName, operationId),
+                actorId -> new BackendOperationStatusLease(this.actionBarCoordinator, actorId, BackendActionBarCoordinator.Owner.ADMIN_SEND),
+                (actor, component) -> this.notifyActionBar(actor, BackendActionBarCoordinator.Owner.ADMIN_SEND, component, 3000L),
+                (context, failure) -> {
+                    String message = failure == null ? "unknown failure" : failure.getMessage();
+                    this.getLogger().warning(context + ": " + (message == null || message.isBlank() ? failure.getClass().getSimpleName() : message));
+                });
         this.identityTransferService = new BackendIdentityTransferService();
         this.identitySessionService = new BackendIdentitySessionService();
         this.identityResetService = new BackendIdentityResetService();
@@ -682,7 +714,9 @@ PluginMessageListener {
             this.travelStateService.cancelTasksAndClearStatuses();
         }
         this.meetRequestService.cancelAllAndClear();
-        this.adminSendOperations.clear(operation -> this.cleanupAdminSendOperation(operation, false));
+        if (this.adminSendService != null) {
+            this.adminSendService.clear();
+        }
         for (BukkitTask bukkitTask : this.skinChangeTimeouts.values()) {
             bukkitTask.cancel();
         }
@@ -4383,149 +4417,15 @@ PluginMessageListener {
     }
 
     private void startAdminSend(Player actor, Player target, ServerId destination) {
-        if (actor == null || !actor.isOnline() || !this.requireAdmin(actor) || !this.adminPeopleActionService.canTarget(actor, target) || destination == null) {
-            this.notifyAdminSend(actor, "try again", NamedTextColor.DARK_GRAY);
-            return;
-        }
-        AdminSendOperation existing = this.currentAdminSend(actor.getUniqueId());
-        if (existing != null) {
-            if (existing.targetId.equals(target.getUniqueId()) && existing.destination == destination) {
-                this.cancelAdminSend(actor.getUniqueId(), true);
-                return;
-            }
-            this.cancelAdminSend(actor.getUniqueId(), false);
-        }
-        if (!this.isServerAvailable(destination) && !this.isPlaceWakeable(destination)) {
-            this.notifyAdminSend(actor, "out of range", NamedTextColor.DARK_GRAY);
-            return;
-        }
-        BackendOperationToken token = this.nextAdminSendToken();
-        AdminSendOperation pending = new AdminSendOperation(actor.getUniqueId(), target.getUniqueId(), destination, token,
-                new BackendOperationStatusLease(this.actionBarCoordinator, actor.getUniqueId(), BackendActionBarCoordinator.Owner.ADMIN_SEND));
-        if (!this.adminSendOperations.beginIfAbsent(actor.getUniqueId(), token, pending)) {
-            pending.statusLease.close();
-            this.notifyAdminSend(actor, "try again", NamedTextColor.DARK_GRAY);
-            return;
-        }
-        if (this.isServerAvailable(destination)) {
-            this.dispatchAdminSend(pending);
-            return;
-        }
-        pending.statusLease.publish(Component.text("waiting", NamedTextColor.GRAY));
-        this.sendWakePlaceRequest(actor, destination);
-        this.setPlaceRuntimeStatus(destination, this.restWakingStatus());
-        long timeoutAt = this.monotonicMillis() + 120000L;
-        BukkitTask wakeTask = Bukkit.getScheduler().runTaskTimer((Plugin)this, () -> {
-            if (!this.isCurrentAdminSend(pending)) return;
-            Player currentActor = Bukkit.getPlayer((UUID)pending.actorId);
-            Player currentTarget = Bukkit.getPlayer((UUID)pending.targetId);
-            if (currentActor == null || !currentActor.isOnline() || !this.requireAdmin(currentActor) || !this.adminPeopleActionService.canTarget(currentActor, currentTarget)) {
-                this.failAdminSend(pending, "try again");
-                return;
-            }
-            if (this.isServerAvailable(pending.destination)) {
-                this.dispatchAdminSend(pending);
-                return;
-            }
-            if (this.monotonicMillis() >= timeoutAt) {
-                this.failAdminSend(pending, "out of range");
-                return;
-            }
-            pending.statusLease.publish(Component.text("waiting", NamedTextColor.GRAY));
-        }, 1L, 20L);
-        pending.taskSlot.replace(wakeTask);
-    }
-
-    private void dispatchAdminSend(AdminSendOperation pending) {
-        if (!this.isCurrentAdminSend(pending)) return;
-        pending.taskSlot.cancel();
-        Player actor = Bukkit.getPlayer((UUID)pending.actorId);
-        Player target = Bukkit.getPlayer((UUID)pending.targetId);
-        if (actor == null || !actor.isOnline() || !this.requireAdmin(actor) || !this.adminPeopleActionService.canTarget(actor, target) || !this.isServerAvailable(pending.destination)) {
-            this.failAdminSend(pending, "try again");
-            return;
-        }
-        this.saveIdentityTransfer(target, pending.destination);
-        this.adminSendProtocolService.send(actor, pending.targetId, pending.destination.proxyName, pending.token.operationId());
-        actor.closeInventory();
-        BukkitTask resultTimeoutTask = Bukkit.getScheduler().runTaskLater((Plugin)this, () -> {
-            if (this.isCurrentAdminSend(pending)) this.failAdminSend(pending, "try again");
-        }, 200L);
-        pending.taskSlot.replace(resultTimeoutTask);
+        this.adminSendService.start(actor, target, destination);
     }
 
     private void sendAdminTargetToCurrentSpawn(Player actor, Player target) {
-        AdminSendOperation existing = this.currentAdminSend(actor.getUniqueId());
-        if (existing != null) this.cancelAdminSend(actor.getUniqueId(), false);
-        if (actor == null || !actor.isOnline() || !this.requireAdmin(actor) || !this.adminPeopleActionService.canTarget(actor, target)) {
-            this.notifyAdminSend(actor, "try again", NamedTextColor.DARK_GRAY);
-            return;
-        }
-        Location spawn = this.currentServerSpawnLocation();
-        if (spawn == null || !target.teleport(spawn)) {
-            this.notifyAdminSend(actor, "try again", NamedTextColor.DARK_GRAY);
-            return;
-        }
-        actor.closeInventory();
-        this.notifyAdminSend(actor, "sent", NamedTextColor.GRAY);
-    }
-
-    private void finishAdminSendResult(UUID actorId, UUID targetId, String place, UUID operationId, String result) {
-        AdminSendOperation pending = this.currentAdminSend(actorId);
-        if (pending == null || !pending.token.operationId().equals(operationId) || !pending.targetId.equals(targetId)
-                || !pending.destination.proxyName.equalsIgnoreCase(place)) return;
-        if (this.adminSendOperations.removeIfCurrent(actorId, pending.token).isEmpty()) return;
-        this.cleanupAdminSendOperation(pending, false);
-        Player actor = Bukkit.getPlayer((UUID)actorId);
-        if (BackendAdminProtocol.SEND_RESULT_SENT.equals(result)) {
-            this.notifyAdminSend(actor, "sent", NamedTextColor.GRAY);
-            return;
-        }
-        Player target = Bukkit.getPlayer((UUID)targetId);
-        if (target != null) this.clearIdentityTransfer(target);
-        this.notifyAdminSend(actor, "try again", NamedTextColor.DARK_GRAY);
-    }
-
-    private void failAdminSend(AdminSendOperation pending, String message) {
-        if (this.adminSendOperations.removeIfCurrent(pending.actorId, pending.token).isEmpty()) return;
-        this.cleanupAdminSendOperation(pending, true);
-        this.notifyAdminSend(Bukkit.getPlayer((UUID)pending.actorId), message, NamedTextColor.DARK_GRAY);
+        this.adminSendService.sendToCurrentSpawn(actor, target);
     }
 
     private void cancelAdminSend(UUID actorId, boolean notify) {
-        AdminSendOperation pending = this.adminSendOperations.remove(actorId).map(BackendOperationRegistry.Entry::operation).orElse(null);
-        if (pending == null) return;
-        this.cleanupAdminSendOperation(pending, true);
-        if (notify) this.notifyAdminSend(Bukkit.getPlayer((UUID)actorId), "nothing changed", NamedTextColor.DARK_GRAY);
-    }
-
-    private boolean isCurrentAdminSend(AdminSendOperation pending) {
-        return pending != null && this.adminSendOperations.isCurrent(pending.actorId, pending.token);
-    }
-
-    private AdminSendOperation currentAdminSend(UUID actorId) {
-        return actorId == null ? null : this.adminSendOperations.current(actorId)
-                .map(BackendOperationRegistry.Entry::operation)
-                .orElse(null);
-    }
-
-    private BackendOperationToken nextAdminSendToken() {
-        long generation = this.adminSendGenerationCounter.updateAndGet(value -> value == Long.MAX_VALUE ? 1L : value + 1L);
-        return BackendOperationToken.create(generation);
-    }
-
-    private void cleanupAdminSendOperation(AdminSendOperation operation, boolean clearTransfer) {
-        if (operation == null) return;
-        operation.taskSlot.cancel();
-        operation.statusLease.close();
-        if (!clearTransfer) return;
-        Player target = Bukkit.getPlayer(operation.targetId);
-        if (target != null) this.clearIdentityTransfer(target);
-    }
-
-    private void notifyAdminSend(Player actor, String message, TextColor color) {
-        if (actor == null || !actor.isOnline()) return;
-        this.notifyActionBar(actor, BackendActionBarCoordinator.Owner.ADMIN_SEND, Component.text(message, color), 3000L);
+        this.adminSendService.cancel(actorId, notify);
     }
 
     private void clearIdentityTransfer(Player target) {
@@ -12142,23 +12042,6 @@ PluginMessageListener {
     }
 
     private record PendingSkinApply(String skin, boolean shouldNotify) {
-    }
-
-    private static final class AdminSendOperation {
-        private final UUID actorId;
-        private final UUID targetId;
-        private final ServerId destination;
-        private final BackendOperationToken token;
-        private final BackendOperationTaskSlot taskSlot = new BackendOperationTaskSlot();
-        private final BackendOperationStatusLease statusLease;
-
-        private AdminSendOperation(UUID actorId, UUID targetId, ServerId destination, BackendOperationToken token, BackendOperationStatusLease statusLease) {
-            this.actorId = actorId;
-            this.targetId = targetId;
-            this.destination = destination;
-            this.token = token;
-            this.statusLease = statusLease;
-        }
     }
 
     private static final class ManualBackupOperation {
