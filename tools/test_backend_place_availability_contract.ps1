@@ -57,9 +57,12 @@ foreach ($required in @(
 foreach ($required in @(
     "final class BackendPlaceRuntimeLifecycleService",
     "runTaskTimerAsynchronously",
+    "runTaskTimer(",
+    "Runnable probeAction, Runnable statusAction",
     "ERROR_LOG_INTERVAL_NANOS",
     "this.errorHandler.accept(exception)",
-    "this.task.cancel()"
+    "this.probeTask.cancel()",
+    "this.statusTask.cancel()"
 )) {
     if (-not $lifecycle.Contains($required)) { throw "BackendPlaceRuntimeLifecycleService missing lifecycle ownership: $required" }
 }
@@ -71,9 +74,9 @@ foreach ($required in @(
     "this.placeAvailabilityService = new BackendPlaceAvailabilityService<ServerId>(this.placeRuntimeStatusService)",
     "this.placeRuntimeService = new BackendPlaceRuntimeService<ServerId>(this.placeAvailabilityService::canConnect)",
     "this.placeRuntimeService.refresh(List.of(ServerId.values()), this.currentServer)",
-    "this.placeRuntimeLifecycleService.start(100L, 100L, this::refreshAvailability)",
+    "this.placeRuntimeLifecycleService.start(100L, 100L, this::refreshAvailability, this::reloadPlaces)",
     "this.placeRuntimeLifecycleService.stop()",
-    "return this.placeRuntimeService.available(serverId, this.currentServer)",
+    "return this.placeRuntimeService.available(serverId, this.currentServer) && this.isServerReady(serverId)",
     "return this.placeRuntimeService.configure(",
     "return this.placeAvailabilityService.ready(this.places, serverId, target -> target.proxyName)",
     "return this.placeAvailabilityService.wakeable(this.places, serverId, target -> target.proxyName)"
@@ -103,6 +106,10 @@ foreach ($forbidden in @(
     if ($backend.Contains($forbidden)) {
         throw "LemonOSPlugin still owns backend place availability orchestration detail: $forbidden"
     }
+}
+
+if ($backend -match '(?s)private void refreshAvailability\(\)\s*\{[^}]*reloadPlaces\(\)') {
+    throw "Async reachability refresh must not reload shared place YAML."
 }
 
 Write-Host "LemonOS backend place availability contract tests passed."

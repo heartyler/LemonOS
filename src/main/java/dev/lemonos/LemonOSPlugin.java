@@ -8902,8 +8902,9 @@ PluginMessageListener {
 
     private void startAvailabilityChecks() {
         this.placeRuntimeLifecycleService.stop();
+        this.reloadPlaces();
         this.refreshAvailability();
-        this.placeRuntimeLifecycleService.start(100L, 100L, this::refreshAvailability);
+        this.placeRuntimeLifecycleService.start(100L, 100L, this::refreshAvailability, this::reloadPlaces);
     }
 
     private void startAuraTask() {
@@ -8944,12 +8945,11 @@ PluginMessageListener {
     }
 
     private void refreshAvailability() {
-        this.reloadPlaces();
         this.placeRuntimeService.refresh(List.of(ServerId.values()), this.currentServer);
     }
 
     private boolean isServerAvailable(ServerId serverId) {
-        return this.placeRuntimeService.available(serverId, this.currentServer);
+        return this.placeRuntimeService.available(serverId, this.currentServer) && this.isServerReady(serverId);
     }
 
     private boolean isServerReady(ServerId serverId) {

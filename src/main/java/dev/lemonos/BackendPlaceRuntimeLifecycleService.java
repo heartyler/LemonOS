@@ -5,12 +5,13 @@ import java.util.function.Consumer;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
-/** Owns the asynchronous place availability probe lifecycle. */
+/** Owns async reachability probing and main-thread place status refresh. */
 final class BackendPlaceRuntimeLifecycleService {
     private static final long ERROR_LOG_INTERVAL_NANOS = 30_000_000_000L;
     private final Plugin plugin;
     private final Consumer<RuntimeException> errorHandler;
-    private BukkitTask task;
+    private BukkitTask probeTask;
+    private BukkitTask statusTask;
     private long lastErrorLogNanos;
 
     BackendPlaceRuntimeLifecycleService(Plugin plugin, Consumer<RuntimeException> errorHandler) {
@@ -18,20 +19,32 @@ final class BackendPlaceRuntimeLifecycleService {
         this.errorHandler = Objects.requireNonNull(errorHandler, "errorHandler");
     }
 
-    void start(long initialDelayTicks, long periodTicks, Runnable action) {
+    void start(long initialDelayTicks, long periodTicks, Runnable probeAction, Runnable statusAction) {
         this.stop();
-        if (action == null || periodTicks <= 0L || !this.plugin.isEnabled()) return;
-        this.task = this.plugin.getServer().getScheduler().runTaskTimerAsynchronously(
+        if (probeAction == null || statusAction == null || periodTicks <= 0L || !this.plugin.isEnabled()) return;
+        long safeInitialDelay = Math.max(0L, initialDelayTicks);
+        long safePeriod = Math.max(1L, periodTicks);
+        this.probeTask = this.plugin.getServer().getScheduler().runTaskTimerAsynchronously(
                 this.plugin,
-                () -> this.runSafely(action),
-                Math.max(0L, initialDelayTicks),
-                Math.max(1L, periodTicks));
+                () -> this.runSafely(probeAction),
+                safeInitialDelay,
+                safePeriod);
+        this.statusTask = this.plugin.getServer().getScheduler().runTaskTimer(
+                this.plugin,
+                () -> this.runSafely(statusAction),
+                safeInitialDelay,
+                safePeriod);
     }
 
     void stop() {
-        if (this.task == null) return;
-        this.task.cancel();
-        this.task = null;
+        if (this.probeTask != null) {
+            this.probeTask.cancel();
+            this.probeTask = null;
+        }
+        if (this.statusTask != null) {
+            this.statusTask.cancel();
+            this.statusTask = null;
+        }
     }
 
     private void runSafely(Runnable action) {
