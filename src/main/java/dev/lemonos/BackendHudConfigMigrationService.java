@@ -9,32 +9,32 @@ final class BackendHudConfigMigrationService {
         this.configMigrationService = configMigrationService;
     }
 
-    boolean setBoardDefaults(FileConfiguration config, Board board) {
-        String configPath = board.configPath();
+    boolean setHudDefaults(FileConfiguration config, Hud hud) {
+        String configPath = hud.configPath();
         boolean changed = false;
         changed |= this.configMigrationService.setMissing(config, configPath + ".enabled", false);
-        changed |= this.configMigrationService.setMissing(config, configPath + ".title", board.defaultTitle());
-        changed |= this.configMigrationService.setMissing(config, configPath + ".subtitle", board.defaultSubtitle());
-        changed |= this.configMigrationService.setMissing(config, configPath + ".bottom-line", board.defaultBottomLine());
+        changed |= this.configMigrationService.setMissing(config, configPath + ".title", hud.defaultTitle());
+        changed |= this.configMigrationService.setMissing(config, configPath + ".subtitle", hud.defaultSubtitle());
+        changed |= this.configMigrationService.setMissing(config, configPath + ".bottom-line", hud.defaultBottomLine());
         changed |= this.configMigrationService.setMissing(config, configPath + ".refresh-minutes", 1);
         changed |= this.configMigrationService.setMissing(config, configPath + ".top", 5);
         changed |= this.configMigrationService.setMissing(config, configPath + ".name-width", 12);
-        if (board.trackBlocksChanged()) {
+        if (hud.trackBlocksChanged()) {
             changed |= this.configMigrationService.setMissing(config, configPath + ".scoring.track-blocks-changed", true);
         }
         String displayPath = configPath + ".display";
-        changed |= this.setDisplayDefaults(config, displayPath, board.defaultX(), board.defaultY(), board.defaultZ());
-        changed |= this.migrateGeneratedDefaults(config, board, displayPath);
-        changed |= this.migrateAutoChainDisplay(config, board, displayPath);
+        changed |= this.setDisplayDefaults(config, hud, displayPath);
+        changed |= this.migrateGeneratedDefaults(config, hud, displayPath);
+        changed |= this.migrateAutoChainDisplay(config, hud, displayPath);
         return changed;
     }
 
-    private boolean setDisplayDefaults(FileConfiguration config, String path, double x, double y, double z) {
+    private boolean setDisplayDefaults(FileConfiguration config, Hud hud, String path) {
         boolean changed = false;
         changed |= this.configMigrationService.setMissing(config, path + ".world", "world");
-        changed |= this.configMigrationService.setMissing(config, path + ".x", x);
-        changed |= this.configMigrationService.setMissing(config, path + ".y", y);
-        changed |= this.configMigrationService.setMissing(config, path + ".z", z);
+        changed |= this.configMigrationService.setMissing(config, path + ".x", hud.defaultX());
+        changed |= this.configMigrationService.setMissing(config, path + ".y", hud.defaultY());
+        changed |= this.configMigrationService.setMissing(config, path + ".z", hud.defaultZ());
         changed |= this.configMigrationService.setMissing(config, path + ".yaw", 90.0);
         changed |= this.configMigrationService.setMissing(config, path + ".pitch", 0.0);
         changed |= this.configMigrationService.setMissing(config, path + ".billboard", "fixed");
@@ -60,15 +60,16 @@ final class BackendHudConfigMigrationService {
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.background-alpha", 0);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.name-width", 12);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.title-offset-x", 0.0);
-        changed |= this.configMigrationService.setMissing(config, path + ".bedrock.title-offset-y", 0.15);
+        boolean stayedClose = "stayed-close".equals(hud.dataKey());
+        changed |= this.configMigrationService.setMissing(config, path + ".bedrock.title-offset-y", stayedClose ? 0.27 : 0.15);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.title-offset-z", 0.0);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.subtitle-offset-x", 0.0);
-        changed |= this.configMigrationService.setMissing(config, path + ".bedrock.subtitle-offset-y", -0.10);
+        changed |= this.configMigrationService.setMissing(config, path + ".bedrock.subtitle-offset-y", stayedClose ? -0.20 : -0.10);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.subtitle-offset-z", 0.0);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.row-start-offset-x", 0.0);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.row-start-offset-y", -0.34);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.row-start-offset-z", 0.0);
-        changed |= this.configMigrationService.setMissing(config, path + ".bedrock.row-gap", -0.16);
+        changed |= this.configMigrationService.setMissing(config, path + ".bedrock.row-gap", stayedClose ? -0.27 : -0.16);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.bottom-offset-x", 0.0);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.bottom-offset-y", -1.02);
         changed |= this.configMigrationService.setMissing(config, path + ".bedrock.bottom-offset-z", 0.0);
@@ -77,37 +78,36 @@ final class BackendHudConfigMigrationService {
         return changed;
     }
 
-    private boolean migrateGeneratedDefaults(FileConfiguration config, Board board, String displayPath) {
+    private boolean migrateGeneratedDefaults(FileConfiguration config, Hud hud, String displayPath) {
         boolean changed = false;
-        String configPath = board.configPath();
-        if ("made-room".equals(board.dataKey())) {
+        if ("made-room".equals(hud.dataKey())) {
             if (this.positionMatches(config, displayPath, 9.20, -60.86, 0.5)) {
-                this.applyDisplayBlueprintDefaults(config, board, displayPath);
+                this.applyDisplayBlueprintDefaults(config, hud, displayPath);
                 changed = true;
             }
-        } else if ("grew-here".equals(board.dataKey()) && this.positionMatches(config, displayPath, 12.90, -60.86, 0.5)) {
-            this.applyDisplayBlueprintDefaults(config, board, displayPath);
+        } else if ("grew-here".equals(hud.dataKey()) && this.positionMatches(config, displayPath, 12.90, -60.86, 0.5)) {
+            this.applyDisplayBlueprintDefaults(config, hud, displayPath);
             changed = true;
         }
         return changed;
     }
 
-    private boolean migrateAutoChainDisplay(FileConfiguration config, Board board, String displayPath) {
-        if (!"auto-chain".equals(board.dataKey())) {
+    private boolean migrateAutoChainDisplay(FileConfiguration config, Hud hud, String displayPath) {
+        if (!"auto-chain".equals(hud.dataKey())) {
             return false;
         }
         boolean changed = false;
-        String configPath = board.configPath();
+        String configPath = hud.configPath();
         if ("Chain".equals(config.getString(configPath + ".title"))) {
-            config.set(configPath + ".title", board.defaultTitle());
+            config.set(configPath + ".title", hud.defaultTitle());
             changed = true;
         }
         if ("where work carries on.".equals(config.getString(configPath + ".subtitle"))) {
-            config.set(configPath + ".subtitle", board.defaultSubtitle());
+            config.set(configPath + ".subtitle", hud.defaultSubtitle());
             changed = true;
         }
         if ("chains completed.".equals(config.getString(configPath + ".bottom-line"))) {
-            config.set(configPath + ".bottom-line", board.defaultBottomLine());
+            config.set(configPath + ".bottom-line", hud.defaultBottomLine());
             changed = true;
         }
         boolean firstLegacyPosition = this.positionMatches(config, displayPath, 12.90, -60.86, 0.5);
@@ -115,7 +115,7 @@ final class BackendHudConfigMigrationService {
         if (!firstLegacyPosition && !secondLegacyPosition) {
             return changed;
         }
-        this.applyDisplayBlueprintDefaults(config, board, displayPath);
+        this.applyDisplayBlueprintDefaults(config, hud, displayPath);
         return true;
     }
 
@@ -125,10 +125,10 @@ final class BackendHudConfigMigrationService {
                 && this.nearly(config.getDouble(path + ".z"), z);
     }
 
-    private void applyDisplayBlueprintDefaults(FileConfiguration config, Board board, String path) {
-        config.set(path + ".x", board.defaultX());
-        config.set(path + ".y", board.defaultY());
-        config.set(path + ".z", board.defaultZ());
+    private void applyDisplayBlueprintDefaults(FileConfiguration config, Hud hud, String path) {
+        config.set(path + ".x", hud.defaultX());
+        config.set(path + ".y", hud.defaultY());
+        config.set(path + ".z", hud.defaultZ());
         config.set(path + ".title-offset-y", 0.15);
         config.set(path + ".subtitle-offset-y", 0.0);
         config.set(path + ".bottom-offset-y", -1.52);
@@ -140,7 +140,7 @@ final class BackendHudConfigMigrationService {
         return Math.abs(value - expected) < 1.0E-6;
     }
 
-    record Board(String dataKey, String configPath, String defaultTitle, String defaultSubtitle, String defaultBottomLine,
+    record Hud(String dataKey, String configPath, String defaultTitle, String defaultSubtitle, String defaultBottomLine,
                  double defaultX, double defaultY, double defaultZ, boolean trackBlocksChanged) {
     }
 }

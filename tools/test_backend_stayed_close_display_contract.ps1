@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path -LiteralPath $Root).Path
 $servicePath = Join-Path $Root "src\main\java\dev\lemonos\BackendStayedCloseDisplayService.java"
 $backendPath = Join-Path $Root "src\main\java\dev\lemonos\LemonOSPlugin.java"
-$templatePath = Join-Path $Root "templates\runtime\LemonOS\boards.yml"
+$templatePath = Join-Path $Root "templates\runtime\LemonOS\hud.yml"
 
 if (-not (Test-Path -LiteralPath $servicePath -PathType Leaf)) {
     throw "Missing backend BackendStayedCloseDisplayService."
@@ -18,18 +18,19 @@ $template = Get-Content -Raw -LiteralPath $templatePath
 
 foreach ($required in @(
     "final class BackendStayedCloseDisplayService",
-    "BackendDisplayModel model(BackendDisplayConfig config, List<Rank> ranks)",
+    "BackendDisplayModel model(BackendDisplayConfig config, String configPath, List<Rank> ranks)",
     "ArrayList<BackendDisplayModel.Entry> entries = new ArrayList<BackendDisplayModel.Entry>()",
-    "config.intValue(`"stayed-close.top`", 5, 1, 10)",
-    "config.doubleValue(`"stayed-close.display.subtitle-offset-y`", -0.10, -4.0, 4.0)",
-    "config.doubleValue(`"stayed-close.display.row-start-offset-y`", -0.34, -4.0, 4.0)",
-    "config.doubleValue(`"stayed-close.display.row-gap`", -0.13, -2.0, 2.0)",
-    "config.doubleValue(`"stayed-close.display.name-offset-z`", -0.32, -8.0, 8.0)",
-    "config.doubleValue(`"stayed-close.display.value-offset-z`", `"stayed-close.display.time-offset-z`", 0.48, -8.0, 8.0)",
-    "config.booleanValue(`"stayed-close.display.bedrock.enabled`", true)",
-    "config.stringValue(`"stayed-close.title`", `"Stayclose`").trim()",
-    "config.stringValue(`"stayed-close.subtitle`", `"where small steps stay.`").trim()",
-    "config.stringValue(`"stayed-close.bottom-line`", `"time spent here.`").trim()",
+    "String path = configPath == null || configPath.isBlank() ? `"hud.stayed-close`" : configPath",
+    "config.intValue(path + `".top`", 5, 1, 10)",
+    "config.doubleValue(path + `".display.subtitle-offset-y`", -0.10, -4.0, 4.0)",
+    "config.doubleValue(path + `".display.row-start-offset-y`", -0.34, -4.0, 4.0)",
+    "config.doubleValue(path + `".display.row-gap`", -0.13, -2.0, 2.0)",
+    "config.doubleValue(path + `".display.name-offset-z`", -0.32, -8.0, 8.0)",
+    "config.doubleValue(path + `".display.value-offset-z`", path + `".display.time-offset-z`", 0.48, -8.0, 8.0)",
+    "config.booleanValue(path + `".display.bedrock.enabled`", false)",
+    "config.stringValue(path + `".title`", `"Stayclose`").trim()",
+    "config.stringValue(path + `".subtitle`", `"where small steps stay.`").trim()",
+    "config.stringValue(path + `".bottom-line`", `"time spent here.`").trim()",
     "`"stayed_close_title`"",
     "`"stayed_close_subtitle`"",
     "`"stayed_close_bottom`"",
@@ -39,7 +40,7 @@ foreach ($required in @(
     "`"stayed_close_bedrock_subtitle`"",
     "`"stayed_close_bedrock_bottom`"",
     "`"stayed_close_bedrock_row_`" + (i + 1)",
-    "BackendDisplayText.fitName(rank.name(), config.intValue(`"stayed-close.name-width`", 12, 4, 16))",
+    "BackendDisplayText.fitName(rank.name(), config.intValue(path + `".name-width`", 12, 4, 16))",
     "formatTime(rank.totalSeconds())",
     "BackendDisplayText.fitName(rank.name(), bedrockNameWidth) + `" `" + formatTime(rank.totalSeconds())",
     "String formatTime(long totalSeconds)",
@@ -53,13 +54,13 @@ foreach ($required in @(
 foreach ($required in @(
     "private BackendStayedCloseDisplayService stayedCloseDisplayService",
     "this.stayedCloseDisplayService = new BackendStayedCloseDisplayService()",
-    "BackendDisplayModel displayModel = this.stayedCloseDisplayService.model(this.backendDisplayConfig(), arrayList)",
+    "BackendDisplayModel displayModel = this.stayedCloseDisplayService.model(this.backendDisplayConfig(), hudDefinition.configPath(), arrayList)",
     "if (!displayModel.bedrockEnabled())",
     "this.clearStayedCloseBedrockDisplays()",
     "for (BackendDisplayModel.Entry entry : displayModel.entries())",
     "this.updateStayedCloseDisplayRole(world, this.stayedCloseLocation(location, entry.offsetX(), entry.offsetY(), entry.offsetZ()), entry.role(), this.backendDisplayComponent(entry), this.backendDisplayAlignment(entry.alignment()))",
     "private BackendDisplayConfig backendDisplayConfig()",
-    "return this.boardConfig;",
+    "return this.hudConfig;",
     "private Component backendDisplayComponent(BackendDisplayModel.Entry entry)",
     "private TextDisplay.TextAlignment backendDisplayAlignment(BackendDisplayModel.Alignment alignment)"
 )) {

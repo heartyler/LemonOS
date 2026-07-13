@@ -19,7 +19,7 @@ $proxy = Get-Content -Raw -LiteralPath $proxyPath
 foreach ($required in @(
     "final class ProxyLifecycleService",
     "void ensureSharedDataFiles(ProxyRuntimeLayout runtimePaths)",
-    "boolean stayedCloseCollectionEnabled(Path boardsConfigFile)",
+    "boolean stayedCloseCollectionEnabled(Path hudConfigFile)",
     "String buildSourceSnapshot(Class<?> ownerClass)",
     "Files.createDirectories(runtimePaths.sharedDataFolder",
     "AccessRepository.defaultFile()",
@@ -40,7 +40,7 @@ foreach ($required in @(
     "public final class ProxyRuntimeLayout",
     "static ProxyRuntimeLayout resolve()",
     "this.runtimeRoot.resolve(`"lemonos-data`")",
-    "this.runtimeRoot.resolve(`"LemonOS`").resolve(`"boards.yml`")",
+    "this.runtimeRoot.resolve(`"LemonOS`").resolve(`"hud.yml`")",
     "System.getProperty(`"lemonos.runtimeRoot`")",
     "System.getenv(`"LEMONOS_RUNTIME_ROOT`")"
 )) { if (-not $layout.Contains($required)) { throw "ProxyRuntimeLayout missing: $required" } }
@@ -67,7 +67,7 @@ foreach ($forbidden in @(
 if ($proxy -notmatch "new ProxyLifecycleService\(this\.logger\)" -or
     $proxy -notmatch "ProxyRuntimeLayout runtimePaths = ProxyRuntimeLayout\.resolve\(\)" -or
     $proxy -notmatch "this\.lifecycleService\.ensureSharedDataFiles\(runtimePaths\)" -or
-    $proxy -notmatch "this\.lifecycleService\.stayedCloseCollectionEnabled\(this\.boardsConfigFile\)" -or
+    $proxy -notmatch "this\.lifecycleService\.stayedCloseCollectionEnabled\(this\.hudConfigFile\)" -or
     $proxy -notmatch "this\.lifecycleService\.buildSourceSnapshot\(LemonOSProxyPlugin\.class\)") {
     throw "LemonOSProxyPlugin is not wired through ProxyLifecycleService."
 }

@@ -69,8 +69,5 @@ survival:
     tools: true
     weapons: true
     prefer-inventory-first: true
-  recipe-book:
-    unlock-all: true
-    silent: true
   chain-status:
     enabled: true

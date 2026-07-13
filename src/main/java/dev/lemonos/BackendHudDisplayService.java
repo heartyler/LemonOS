@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class BackendHudDisplayService {
-    BackendDisplayModel model(BackendDisplayConfig config, Board board, List<Rank> ranks) {
+    BackendDisplayModel model(BackendDisplayConfig config, Hud hud, List<Rank> ranks) {
         ArrayList<BackendDisplayModel.Entry> entries = new ArrayList<BackendDisplayModel.Entry>();
-        String configPath = board.configPath();
-        String rolePrefix = board.rolePrefix();
+        String configPath = hud.configPath();
+        String rolePrefix = hud.rolePrefix();
         int top = config.intValue(configPath + ".top", 5, 1, 10);
         double subtitleOffsetY = config.doubleValue(configPath + ".display.subtitle-offset-y", -0.10, -4.0, 4.0);
         double rowStartOffsetY = config.doubleValue(configPath + ".display.row-start-offset-y", -0.34, -4.0, 4.0);
@@ -21,9 +21,9 @@ final class BackendHudDisplayService {
         double titleOffsetX = config.doubleValue(configPath + ".display.title-offset-x", 0.0, -8.0, 8.0);
         double titleOffsetY = config.doubleValue(configPath + ".display.title-offset-y", 0.0, -4.0, 4.0);
         double titleOffsetZ = config.doubleValue(configPath + ".display.title-offset-z", 0.0, -8.0, 8.0);
-        String title = config.stringValue(configPath + ".title", board.defaultTitle());
-        String subtitle = config.stringValue(configPath + ".subtitle", board.defaultSubtitle());
-        String bottomLine = config.stringValue(configPath + ".bottom-line", board.defaultBottomLine());
+        String title = config.stringValue(configPath + ".title", hud.defaultTitle());
+        String subtitle = config.stringValue(configPath + ".subtitle", hud.defaultSubtitle());
+        String bottomLine = config.stringValue(configPath + ".bottom-line", hud.defaultBottomLine());
         entries.add(new BackendDisplayModel.Entry(rolePrefix + "title", titleOffsetX, titleOffsetY, titleOffsetZ, title, BackendDisplayModel.ColorRole.WHITE, BackendDisplayModel.Alignment.CENTER));
         entries.add(new BackendDisplayModel.Entry(rolePrefix + "subtitle", 0.0, subtitleOffsetY, 0.0, subtitle, BackendDisplayModel.ColorRole.GRAY, BackendDisplayModel.Alignment.CENTER));
         double bottomOffsetY = config.doubleValue(configPath + ".display.bottom-offset-y", -1.02, -4.0, 4.0);
@@ -55,14 +55,14 @@ final class BackendHudDisplayService {
         return new BackendDisplayModel(bedrockEnabled, entries);
     }
 
-    static final class Board {
+    static final class Hud {
         private final String configPath;
         private final String rolePrefix;
         private final String defaultTitle;
         private final String defaultSubtitle;
         private final String defaultBottomLine;
 
-        Board(String configPath, String rolePrefix, String defaultTitle, String defaultSubtitle, String defaultBottomLine) {
+        Hud(String configPath, String rolePrefix, String defaultTitle, String defaultSubtitle, String defaultBottomLine) {
             this.configPath = configPath;
             this.rolePrefix = rolePrefix;
             this.defaultTitle = defaultTitle;

@@ -2,7 +2,7 @@ param([string]$Root = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCo
 $ErrorActionPreference = "Stop"
 $Source = Join-Path $Root "src\main\java\dev\lemonos"
 $Plugin = Get-Content -Raw -LiteralPath (Join-Path $Source "LemonOSPlugin.java")
-$Boards = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendBoardLifecycleService.java")
+$Hud = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendHudLifecycleService.java")
 $Atmosphere = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendAtmosphereLifecycleService.java")
 $Music = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendAtmosphereMusicLifecycleService.java")
 $Shared = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendRepeatingLifecycleService.java")
@@ -21,18 +21,18 @@ foreach ($snippet in @(
     if (-not $Shared.Contains($snippet)) { throw "Shared lifecycle missing: $snippet" }
 }
 
-if (-not $Boards.Contains("extends BackendRepeatingLifecycleService")) { throw "Boards does not own a typed lifecycle boundary." }
+if (-not $Hud.Contains("extends BackendRepeatingLifecycleService")) { throw "HUD does not own a typed lifecycle boundary." }
 if (-not $Atmosphere.Contains("extends BackendRepeatingLifecycleService")) { throw "Atmosphere does not own a typed lifecycle boundary." }
 if (-not $Music.Contains("extends BackendRepeatingLifecycleService")) { throw "Lobby music does not own a typed lifecycle boundary." }
 
 foreach ($snippet in @(
-    "private BackendBoardLifecycleService boardLifecycleService;",
+    "private BackendHudLifecycleService hudLifecycleService;",
     "private BackendAtmosphereLifecycleService atmosphereLifecycleService;",
     "private BackendAtmosphereMusicLifecycleService atmosphereMusicLifecycleService;",
-    "this.boardLifecycleService.stop();",
+    "this.hudLifecycleService.stop();",
     "this.atmosphereLifecycleService.stop();",
     "this.atmosphereMusicLifecycleService.stop();",
-    "this.boardLifecycleService.start(40L, plan.periodTicks(), this::updateBoards);",
+    "this.hudLifecycleService.start(40L, plan.periodTicks(), this::updateHuds);",
     'this.atmosphereLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks(), () -> this.runActionBarProducer("atmosphere", this::tickAtmosphere));',
     'this.atmosphereMusicLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks()'
 )) {

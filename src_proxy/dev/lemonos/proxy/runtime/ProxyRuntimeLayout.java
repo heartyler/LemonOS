@@ -9,7 +9,7 @@ public final class ProxyRuntimeLayout {
     public final Path onlineFile;
     public final Path placesFile;
     public final Path playtimeFile;
-    public final Path boardsConfigFile;
+    public final Path hudConfigFile;
 
     private ProxyRuntimeLayout(Path runtimeRoot) {
         this.runtimeRoot = runtimeRoot.toAbsolutePath().normalize();
@@ -18,7 +18,7 @@ public final class ProxyRuntimeLayout {
         this.onlineFile = this.sharedDataFolder.resolve("online.yml");
         this.placesFile = this.sharedDataFolder.resolve("places.yml");
         this.playtimeFile = this.sharedDataFolder.resolve("playtime.yml");
-        this.boardsConfigFile = this.runtimeRoot.resolve("LemonOS").resolve("boards.yml");
+        this.hudConfigFile = this.runtimeRoot.resolve("LemonOS").resolve("hud.yml");
     }
 
     public static ProxyRuntimeLayout resolve() {

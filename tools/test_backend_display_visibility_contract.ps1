@@ -46,8 +46,8 @@ foreach ($required in @(
 foreach ($required in @(
     "private BackendDisplayVisibilityService displayVisibilityService",
     "this.displayVisibilityService = new BackendDisplayVisibilityService()",
-    "if (!this.displayVisibilityService.hudVisible(string, this.boardConfig.bedrockEnabledAtPath(string2), this.isBedrockPlayer(player)))",
-    "if (!this.displayVisibilityService.stayedCloseVisible(string, this.boardConfig.bedrockEnabled(BackendBoardConfig.STAYED_CLOSE), this.isBedrockPlayer(player)))",
+    "if (!this.displayVisibilityService.hudVisible(string, this.hudConfig.bedrockEnabledAtPath(string2), this.isBedrockPlayer(player)))",
+    "if (!this.displayVisibilityService.stayedCloseVisible(string, this.hudConfig.bedrockEnabled(BackendHudConfig.STAYED_CLOSE), this.isBedrockPlayer(player)))",
     "return this.displayVisibilityService.isStayedCloseBedrockRole(string)",
     "player.hideEntity((Plugin)this, (Entity)textDisplay)",
     "player.showEntity((Plugin)this, (Entity)textDisplay)",

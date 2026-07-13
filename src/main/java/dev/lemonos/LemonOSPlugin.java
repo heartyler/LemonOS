@@ -122,7 +122,6 @@ import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -147,7 +146,6 @@ import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.GameRule;
 import org.bukkit.GameRules;
-import org.bukkit.Keyed;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -204,7 +202,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -238,13 +235,14 @@ PluginMessageListener {
     private static final String STAYED_CLOSE_NAME_DISPLAY = "stayed_close_name_";
     private static final String STAYED_CLOSE_TIME_DISPLAY = "stayed_close_time_";
     private static final String STAYED_CLOSE_BEDROCK_BOTTOM_DISPLAY = "stayed_close_bedrock_bottom";
-    private static final String BOARD_MADE_ROOM_DISPLAY = "hud_made_room_";
-    private static final String BOARD_GREW_HERE_DISPLAY = "hud_grew_here_";
-    private static final String BOARD_AUTO_CHAIN_DISPLAY = "hud_auto_chain_";
-    private static final List<BackendBoardDefinition> BOARD_DEFINITIONS = List.of(
-            new BackendBoardDefinition("made-room", BOARD_MADE_ROOM_DISPLAY, "Made Room", "where ideas stay.", "ideas shaped in Sandbox.", 5.42, -60.86, 15.5, Set.of("lobby", "creative"), true),
-            new BackendBoardDefinition("grew-here", BOARD_GREW_HERE_DISPLAY, "Grow", "where good things grow.", "crops planted and harvested.", 5.42, -60.86, -0.5, Set.of("lobby", "survival"), false),
-            new BackendBoardDefinition("auto-chain", BOARD_AUTO_CHAIN_DISPLAY, "Good Work", "where useful things come in.", "chop, mine, and plant.", 5.42, -60.86, 7.5, Set.of("lobby", "survival"), false));
+    private static final String HUD_MADE_ROOM_DISPLAY = "hud_made_room_";
+    private static final String HUD_GREW_HERE_DISPLAY = "hud_grew_here_";
+    private static final String HUD_AUTO_CHAIN_DISPLAY = "hud_auto_chain_";
+    private static final List<BackendHudDefinition> HUD_DEFINITIONS = List.of(
+            new BackendHudDefinition("stayed-close", "stayed_close_", "Stayclose", "where small steps stay.", "time spent here.", 5.42, -60.86, -8.5, Set.of("lobby"), false, BackendHudDefinition.RankingSource.PLAYTIME),
+            new BackendHudDefinition("made-room", HUD_MADE_ROOM_DISPLAY, "Made Room", "where ideas stay.", "ideas shaped in Sandbox.", 5.42, -60.86, 15.5, Set.of("lobby", "creative"), true, BackendHudDefinition.RankingSource.HUD_STATISTICS),
+            new BackendHudDefinition("grew-here", HUD_GREW_HERE_DISPLAY, "Grow", "where good things grow.", "crops planted and harvested.", 5.42, -60.86, -0.5, Set.of("lobby", "survival"), false, BackendHudDefinition.RankingSource.HUD_STATISTICS),
+            new BackendHudDefinition("auto-chain", HUD_AUTO_CHAIN_DISPLAY, "Good Work", "where useful things come in.", "chop, mine, and plant.", 5.42, -60.86, 7.5, Set.of("lobby", "survival"), false, BackendHudDefinition.RankingSource.HUD_STATISTICS));
     private static final double DISPLAY_BOARD_CLEAR_RADIUS_SQUARED = 16.0;
     private static final double SURVIVAL_CHAIN_PERIOD_MULTIPLIER = 1.18;
     private static final double LOBBY_BORDER_SIZE = 128.0;
@@ -320,15 +318,22 @@ PluginMessageListener {
     private FileConfiguration sandbox;
     private File survivalFile;
     private FileConfiguration survival;
-    private File boardsFile;
-    private FileConfiguration boards;
+    private File hudFile;
+    private File legacyBoardsFile;
+    private FileConfiguration hud;
+    private FileConfiguration legacyBoards;
     private File atmosphereFile;
     private FileConfiguration atmosphere;
-    private BackendBoardConfig boardConfig;
+    private File recipesFile;
+    private FileConfiguration recipes;
+    private BackendHudConfig hudConfig;
     private BackendAtmosphereConfig atmosphereConfig;
-    private boolean boardsFileCreated;
+    private BackendRecipeBookConfig recipeBookConfig;
+    private boolean hudFileCreated;
     private boolean atmosphereFileCreated;
-    private boolean boardsConfigDirty;
+    private boolean recipesFileCreated;
+    private boolean recipesConfigReady;
+    private boolean hudConfigDirty;
     private boolean atmosphereConfigDirty;
     private BackendFeatureConfigMigrationService featureConfigMigrationService;
     private BackendPlaceRuntimeLifecycleService placeRuntimeLifecycleService;
@@ -343,10 +348,10 @@ PluginMessageListener {
     private BukkitTask careWorldStatusTask;
     private BukkitTask restTask;
     private BukkitTask tabTask;
-    private BackendBoardLifecycleService boardLifecycleService;
+    private BackendHudLifecycleService hudLifecycleService;
     private BackendAtmosphereLifecycleService atmosphereLifecycleService;
     private BackendAtmosphereMusicLifecycleService atmosphereMusicLifecycleService;
-    private BackendBoardOrchestrationService boardOrchestrationService;
+    private BackendHudOrchestrationService hudOrchestrationService;
     private BackendBoardChunkLeaseService boardChunkLeaseService;
     private BackendWorldPolicy worldPolicy;
     private BackendLobbyBoundsService lobbyBoundsService;
@@ -485,6 +490,7 @@ PluginMessageListener {
     private BackendPasscodeLifecycleService passcodeLifecycleService;
     private BackendPasscodeDisplayService passcodeDisplayService;
     private BackendEnvironmentDamageService environmentDamageService;
+    private BackendRecipeUnlockService recipeUnlockService;
     public void onEnable() {
         this.getLogger().info("LemonOS build " + this.buildSourceSnapshot());
         this.runtimeLayout = BackendRuntimeLayout.resolve();
@@ -496,6 +502,7 @@ PluginMessageListener {
         this.configValidationService = new BackendConfigValidationService(this.getLogger());
         this.featureConfigMigrationService = new BackendFeatureConfigMigrationService(this.configMigrationService);
         this.configDefaultGroupService = new BackendConfigDefaultGroupService(this.configMigrationService);
+        this.recipeUnlockService = new BackendRecipeUnlockService();
         this.mainConfigDefaultService = new BackendMainConfigDefaultService(this.configMigrationService);
         this.hudConfigMigrationService = new BackendHudConfigMigrationService(this.configMigrationService);
         this.configMigrationOrchestrator = new BackendConfigMigrationOrchestrator(
@@ -531,10 +538,10 @@ PluginMessageListener {
         this.atmosphereActionBarService = new BackendAtmosphereActionBarService();
         this.atmosphereMusicService = new BackendAtmosphereMusicService();
         this.activityMessageService = new BackendActivityMessageService();
-        this.boardLifecycleService = new BackendBoardLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("boards", exception));
+        this.hudLifecycleService = new BackendHudLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("hud", exception));
         this.atmosphereLifecycleService = new BackendAtmosphereLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("atmosphere", exception));
         this.atmosphereMusicLifecycleService = new BackendAtmosphereMusicLifecycleService((Plugin)this, exception -> this.logFeatureLifecycleFailure("music", exception));
-        this.boardOrchestrationService = new BackendBoardOrchestrationService();
+        this.hudOrchestrationService = new BackendHudOrchestrationService();
         this.atmosphereOrchestrationService = new BackendAtmosphereOrchestrationService();
         this.atmosphereMusicOrchestrationService = new BackendAtmosphereMusicOrchestrationService();
         this.sandboxDrawingSessionService = new BackendSandboxDrawingSessionService();
@@ -658,7 +665,7 @@ PluginMessageListener {
         this.startPendingOperationWatchdog();
         this.startRestTask();
         this.startTabTask();
-        this.startBoardTask();
+        this.startHudTask();
         this.scheduleAdminCommandQueue();
         this.scheduleCareRequestWatcher();
         this.registerChunkyListeners();
@@ -731,7 +738,7 @@ PluginMessageListener {
         if (this.tabTask != null) {
             this.tabTask.cancel();
         }
-        if (this.boardLifecycleService != null) this.boardLifecycleService.stop();
+        if (this.hudLifecycleService != null) this.hudLifecycleService.stop();
         if (this.boardChunkLeaseService != null) this.boardChunkLeaseService.releaseAll();
         this.saveHudData();
         this.restoreRestPlaceStatus();
@@ -821,7 +828,7 @@ PluginMessageListener {
         Bukkit.getScheduler().runTask((Plugin)this, () -> this.beginIdentity(player));
         Bukkit.getScheduler().runTaskLater((Plugin)this, () -> this.updateStayedCloseDisplayVisibility(player), 20L);
         Bukkit.getScheduler().runTaskLater((Plugin)this, () -> this.updateStayedCloseDisplayVisibility(player), 60L);
-        Bukkit.getScheduler().runTaskLater((Plugin)this, this::updateMetricBoards, 65L);
+        Bukkit.getScheduler().runTaskLater((Plugin)this, this::updateMetricHudDisplays, 65L);
     }
 
     @EventHandler(priority=EventPriority.HIGHEST)
@@ -1910,7 +1917,7 @@ PluginMessageListener {
         this.restoreAuthInventory(player);
         this.purgeLoginItems(player);
         this.ensureCubee(player, this.currentServer == ServerId.LOBBY);
-        this.unlockSurvivalRecipes(player);
+        this.unlockConfiguredRecipes(player);
         this.applySavedSkin(player, false);
         Bukkit.getScheduler().runTaskLater((Plugin)this, () -> this.applySavedSkin(player, false), 40L);
     }
@@ -1947,7 +1954,7 @@ PluginMessageListener {
             return;
         }
         this.ensureCubee(player, false);
-        this.unlockSurvivalRecipes(player);
+        this.unlockConfiguredRecipes(player);
         if (this.trustedSkinSynced.add(player.getUniqueId())) {
             this.applySavedSkin(player, false);
         }
@@ -2538,13 +2545,13 @@ PluginMessageListener {
     }
 
     private boolean ensureHudDataDefaults() {
-        return this.hudDataService.ensureDefaults(this.hudData, this.boardDataKeys());
+        return this.hudDataService.ensureDefaults(this.hudData, this.hudDataKeys());
     }
 
-    private List<String> boardDataKeys() {
+    private List<String> hudDataKeys() {
         ArrayList<String> arrayList = new ArrayList<String>();
-        for (BackendBoardDefinition boardDefinition : BOARD_DEFINITIONS) {
-            arrayList.add(boardDefinition.dataKey());
+        for (BackendHudDefinition hudDefinition : HUD_DEFINITIONS) {
+            if (!hudDefinition.usesPlaytime()) arrayList.add(hudDefinition.dataKey());
         }
         return arrayList;
     }
@@ -2776,37 +2783,44 @@ PluginMessageListener {
     }
 
     private void loadLemonOSConfig() {
-        boolean boardsCreated = !this.runtimeLayout.configFile("boards.yml").isFile();
+        boolean hudCreated = !this.runtimeLayout.configFile("hud.yml").isFile();
         boolean atmosphereCreated = !this.runtimeLayout.configFile("atmosphere.yml").isFile();
+        boolean recipesCreated = !this.runtimeLayout.configFile("recipes.yml").isFile();
         BackendConfigBootstrapService.LoadedConfig loaded = this.configBootstrapService.load(this.runtimeLayout);
         this.configFile = loaded.configFile();
         this.messagesFile = loaded.messagesFile();
         this.sharedPlacesConfigFile = loaded.placesFile();
         this.sandboxFile = loaded.sandboxFile();
         this.survivalFile = loaded.survivalFile();
-        this.boardsFile = loaded.boardsFile();
+        this.hudFile = loaded.hudFile();
+        this.legacyBoardsFile = loaded.legacyBoardsFile();
         this.atmosphereFile = loaded.atmosphereFile();
-        this.boardsFileCreated = boardsCreated;
+        this.recipesFile = loaded.recipesFile();
+        this.hudFileCreated = hudCreated;
         this.atmosphereFileCreated = atmosphereCreated;
+        this.recipesFileCreated = recipesCreated;
         this.config = loaded.config();
         this.messages = loaded.messages();
         this.sharedPlacesConfig = loaded.places();
         this.sandbox = loaded.sandbox();
         this.survival = loaded.survival();
-        this.boards = loaded.boards();
+        this.hud = loaded.hud();
+        this.legacyBoards = loaded.legacyBoards();
         this.atmosphere = loaded.atmosphere();
+        this.recipes = loaded.recipes();
         this.finishLemonOSConfigLoad();
     }
 
     private void finishLemonOSConfigLoad() {
         this.migrateLemonOSConfig();
-        this.boardConfig = new BackendBoardConfig(this.boards);
+        this.hudConfig = new BackendHudConfig(this.hud);
         this.atmosphereConfig = new BackendAtmosphereConfig(this.atmosphere);
+        this.recipeBookConfig = this.recipesConfigReady ? new BackendRecipeBookConfig(this.recipes) : null;
         ArrayList<BackendConfigValidationService.PlacePolicy> placePolicies = new ArrayList<>();
         for (ServerId serverId : ServerId.values()) {
             placePolicies.add(new BackendConfigValidationService.PlacePolicy(serverId.proxyName));
         }
-        this.configValidationService.validate(this.config, this.boards, this.atmosphere, this.sandbox, this.survival, this.sharedPlacesConfig, placePolicies);
+        this.configValidationService.validate(this.config, this.hud, this.atmosphere, this.sandbox, this.survival, this.recipes, this.sharedPlacesConfig, placePolicies);
     }
 
     private void migrateLemonOSConfig() {
@@ -2817,73 +2831,27 @@ PluginMessageListener {
         }
         BackendConfigMigrationOrchestrator.Target target = new BackendConfigMigrationOrchestrator.Target(
                 this.configFile, this.messagesFile, this.sharedPlacesConfigFile, this.sandboxFile, this.survivalFile,
-                this.boardsFile, this.atmosphereFile, this.config, this.messages, this.sharedPlacesConfig,
-                this.sandbox, this.survival, this.boards, this.atmosphere,
-                this.boardsFileCreated, this.atmosphereFileCreated);
-        this.configMigrationOrchestrator.migrate(target, this::applyLegacyConfigDefaults, placeDefaults);
-        this.boardsFileCreated = false;
+                this.hudFile, this.legacyBoardsFile, this.atmosphereFile, this.recipesFile,
+                this.config, this.messages, this.sharedPlacesConfig,
+                this.sandbox, this.survival, this.hud, this.legacyBoards, this.atmosphere, this.recipes,
+                this.hudFileCreated, this.atmosphereFileCreated, this.recipesFileCreated);
+        BackendConfigMigrationOrchestrator.MigrationResult migrationResult =
+                this.configMigrationOrchestrator.migrate(target, this::applyLegacyConfigDefaults, placeDefaults);
+        this.recipesConfigReady = migrationResult.recipesReady();
+        this.hudFileCreated = false;
         this.atmosphereFileCreated = false;
+        this.recipesFileCreated = false;
     }
 
     private BackendConfigMigrationOrchestrator.LegacyDefaultResult applyLegacyConfigDefaults() {
-        this.boardsConfigDirty = false;
+        this.hudConfigDirty = false;
         this.atmosphereConfigDirty = false;
         boolean bl = false;
         bl |= this.mainConfigDefaultService.applyCoreDefaults(this.config);
         bl |= this.mainConfigDefaultService.applyCubeeDefaults(this.config);
         bl |= this.mainConfigDefaultService.applyTabDefaults(this.config);
-        bl |= this.setMissing(this.config, "stayed-close.enabled", false);
-        bl |= this.setMissing(this.config, "stayed-close.refresh-minutes", 1);
-        bl |= this.setMissing(this.config, "stayed-close.top", 5);
-        bl |= this.setMissing(this.config, "stayed-close.name-width", 12);
-        bl |= this.setMissing(this.config, "stayed-close.title", "Stayclose");
-        bl |= this.setMissing(this.config, "stayed-close.subtitle", "where small steps stay.");
-        bl |= this.setMissing(this.config, "stayed-close.bottom-line", "time spent here.");
-        bl |= this.setMissing(this.config, "stayed-close.display.world", "world");
-        bl |= this.setMissing(this.config, "stayed-close.display.x", 5.42);
-        bl |= this.setMissing(this.config, "stayed-close.display.y", -60.86);
-        bl |= this.setMissing(this.config, "stayed-close.display.z", -8.5);
-        bl |= this.setMissing(this.config, "stayed-close.display.yaw", 90.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.pitch", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.billboard", "fixed");
-        bl |= this.setMissing(this.config, "stayed-close.display.scale", 0.53);
-        bl |= this.setMissing(this.config, "stayed-close.display.title-offset-x", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.title-offset-y", 0.15);
-        bl |= this.setMissing(this.config, "stayed-close.display.title-offset-z", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.subtitle-offset-y", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.row-start-offset-y", -0.34);
-        bl |= this.setMissing(this.config, "stayed-close.display.row-gap", -0.13);
-        bl |= this.setMissing(this.config, "stayed-close.display.bottom-offset-y", -1.52);
-        bl |= this.setMissing(this.config, "stayed-close.display.bottom-offset-z", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bottom-scale", 0.42);
-        bl |= this.setMissing(this.config, "stayed-close.display.bottom-line-width", 260);
-        bl |= this.setMissing(this.config, "stayed-close.display.name-offset-z", -0.30);
-        bl |= this.setMissing(this.config, "stayed-close.display.value-offset-z", 0.46);
-        bl |= this.setMissing(this.config, "stayed-close.display.background-alpha", 0);
-        bl |= this.setMissing(this.config, "stayed-close.display.view-range", 32);
-        bl |= this.setMissing(this.config, "stayed-close.display.line-width", 220);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.enabled", false);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.scale", 0.53);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.line-width", 260);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.background-alpha", 0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.name-width", 12);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.title-offset-x", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.title-offset-y", 0.27);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.title-offset-z", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.subtitle-offset-x", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.subtitle-offset-y", -0.20);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.subtitle-offset-z", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.row-start-offset-x", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.row-start-offset-y", -0.34);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.row-start-offset-z", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.row-gap", -0.27);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.bottom-offset-x", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.bottom-offset-y", -1.02);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.bottom-offset-z", 0.0);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.bottom-scale", 0.42);
-        bl |= this.setMissing(this.config, "stayed-close.display.bedrock.bottom-line-width", 260);
-        for (BackendBoardDefinition boardDefinition : BOARD_DEFINITIONS) {
-            bl |= this.setBoardDefaults(boardDefinition);
+        for (BackendHudDefinition hudDefinition : HUD_DEFINITIONS) {
+            bl |= this.setHudDefaults(hudDefinition);
         }
         bl |= this.mainConfigDefaultService.applyRestDefaults(this.config);
         bl |= this.setMissing(this.config, "atmosphere.enabled", true);
@@ -2973,7 +2941,7 @@ PluginMessageListener {
         bl |= this.setMissing(this.config, "sounds.sandbox-done.volume", 0.22);
         bl |= this.setMissing(this.config, "sounds.sandbox-done.pitch", 1.1);
         return new BackendConfigMigrationOrchestrator.LegacyDefaultResult(
-                bl, this.boardsConfigDirty, this.atmosphereConfigDirty);
+                bl, this.hudConfigDirty, this.atmosphereConfigDirty);
     }
 
     private boolean setMissing(FileConfiguration fileConfiguration, String string, Object object) {
@@ -2982,27 +2950,22 @@ PluginMessageListener {
             this.atmosphereConfigDirty |= changed;
             return false;
         }
-        if (fileConfiguration == this.config && string != null && string.startsWith("stayed-close.")) {
-            boolean changed = this.configMigrationService.setMissing(this.boards, this.legacyBoardPath(string), object);
-            this.boardsConfigDirty |= changed;
-            return false;
-        }
         return this.configMigrationService.setMissing(fileConfiguration, string, object);
     }
 
-    private boolean setBoardDefaults(BackendBoardDefinition boardDefinition) {
-        BackendHudConfigMigrationService.Board board = new BackendHudConfigMigrationService.Board(
-                boardDefinition.dataKey(),
-                boardDefinition.configPath(),
-                boardDefinition.defaultTitle(),
-                boardDefinition.defaultSubtitle(),
-                boardDefinition.defaultBottomLine(),
-                boardDefinition.defaultX(),
-                boardDefinition.defaultY(),
-                boardDefinition.defaultZ(),
-                boardDefinition.trackBlocksChanged());
-        boolean changed = this.hudConfigMigrationService.setBoardDefaults(this.boards, board);
-        this.boardsConfigDirty |= changed;
+    private boolean setHudDefaults(BackendHudDefinition hudDefinition) {
+        BackendHudConfigMigrationService.Hud hud = new BackendHudConfigMigrationService.Hud(
+                hudDefinition.dataKey(),
+                hudDefinition.configPath(),
+                hudDefinition.defaultTitle(),
+                hudDefinition.defaultSubtitle(),
+                hudDefinition.defaultBottomLine(),
+                hudDefinition.defaultX(),
+                hudDefinition.defaultY(),
+                hudDefinition.defaultZ(),
+                hudDefinition.trackBlocksChanged());
+        boolean changed = this.hudConfigMigrationService.setHudDefaults(this.hud, hud);
+        this.hudConfigDirty |= changed;
         return false;
     }
 
@@ -3037,13 +3000,6 @@ PluginMessageListener {
             return this.configDouble(string, d, d2, d3);
         }
         return this.configDouble(string2, d, d2, d3);
-    }
-
-    private String legacyBoardPath(String path) {
-        if (path == null) return "";
-        if (path.startsWith("stayed-close.")) return "boards." + path;
-        if (path.startsWith("hud.")) return "boards." + path.substring("hud.".length());
-        return path;
     }
 
     private int sandboxInt(String string, int n, int n2, int n3) {
@@ -6440,19 +6396,17 @@ PluginMessageListener {
         return this.currentServer == ServerId.SURVIVAL && player != null && player.getGameMode() == GameMode.SURVIVAL && !this.isAuthLocked(player);
     }
 
-    private void unlockSurvivalRecipes(Player player) {
-        if (this.currentServer != ServerId.SURVIVAL || player == null || !player.isOnline() || this.isAuthLocked(player) || !this.survivalBoolean("survival.recipe-book.unlock-all", true)) {
+    private void unlockConfiguredRecipes(Player player) {
+        if (this.currentServer == null || player == null || !player.isOnline() || this.isAuthLocked(player)
+                || this.recipeBookConfig == null || !this.recipeBookConfig.unlockAll(this.currentServer.proxyName)) {
             return;
         }
-        ArrayList<NamespacedKey> arrayList = new ArrayList<NamespacedKey>();
-        Iterator<Recipe> iterator = Bukkit.recipeIterator();
-        while (iterator.hasNext()) {
-            Recipe recipe = iterator.next();
-            if (!(recipe instanceof Keyed keyed)) continue;
-            arrayList.add(keyed.getKey());
+        try {
+            this.recipeUnlockService.unlockAll(player, Bukkit.recipeIterator());
         }
-        if (!arrayList.isEmpty()) {
-            player.discoverRecipes(arrayList);
+        catch (RuntimeException exception) {
+            this.logOperationFailure("recipe-book-" + this.currentServer.proxyName,
+                    "LemonOS recovered Recipe Book unlock-all on " + this.currentServer.label + ": " + exception.getMessage());
         }
     }
 
@@ -9355,50 +9309,72 @@ PluginMessageListener {
                 .replace("%direction_xyz%", location == null ? "" : this.facingBlockCoords(location));
     }
 
-    private void startBoardTask() {
-        this.boardLifecycleService.stop();
-        BackendBoardOrchestrationService.Plan plan = this.boardOrchestrationService.plan(this.currentServer.proxyName, this.boardConfig, BOARD_DEFINITIONS);
-        if (plan.clearStayedClose()) this.clearStayedCloseDisplays();
-        for (String rolePrefix : plan.disabledRolePrefixes()) this.clearBoardDisplayPrefix(rolePrefix);
+    private void startHudTask() {
+        this.hudLifecycleService.stop();
+        BackendHudOrchestrationService.Plan plan = this.hudOrchestrationService.plan(this.currentServer.proxyName, this.hudConfig, HUD_DEFINITIONS);
+        for (String rolePrefix : plan.disabledRolePrefixes()) this.clearHudDisplayPrefix(rolePrefix);
         if (!plan.active()) {
             this.boardChunkLeaseService.releaseAll();
             return;
         }
-        this.boardLifecycleService.start(40L, plan.periodTicks(), this::updateBoards);
+        this.hudLifecycleService.start(40L, plan.periodTicks(), this::updateHuds);
     }
 
-    private void updateBoards() {
+    private void updateHuds() {
         this.boardChunkLeaseService.beginCycle();
         try {
-            if (this.currentServer == ServerId.LOBBY && this.boardConfig.enabled(BackendBoardConfig.STAYED_CLOSE)) this.updateStayedCloseDisplay();
-            this.updateMetricBoards();
+            this.updateHudDisplays();
         } finally {
             this.boardChunkLeaseService.endCycle();
         }
     }
 
-    private void updateMetricBoards() {
+    private void updateHudDisplays() {
+        this.reloadHudRankingData();
+        for (BackendHudDefinition hudDefinition : HUD_DEFINITIONS) {
+            if (hudDefinition.enabledOn(this.currentServer.proxyName)) {
+                this.updateHudDisplay(hudDefinition);
+                continue;
+            }
+            this.clearHudDisplayPrefix(hudDefinition.rolePrefix());
+        }
+    }
+
+    private void updateMetricHudDisplays() {
+        this.reloadHudRankingData();
+        for (BackendHudDefinition hudDefinition : HUD_DEFINITIONS) {
+            if (hudDefinition.usesPlaytime()) continue;
+            if (hudDefinition.enabledOn(this.currentServer.proxyName)) {
+                this.updateMetricHudDisplay(hudDefinition);
+                continue;
+            }
+            this.clearHudDisplayPrefix(hudDefinition.rolePrefix());
+        }
+    }
+
+    private void reloadHudRankingData() {
         if (this.hudDataFile != null && this.hudDataFile.isFile()) {
             synchronized (this.hudIoLock) {
                 this.hudData = this.yamlStore.load(this.hudDataFile);
                 this.ensureHudDataDefaults();
             }
         }
-        for (BackendBoardDefinition boardDefinition : BOARD_DEFINITIONS) {
-            if (boardDefinition.enabledOn(this.currentServer.proxyName)) {
-                this.updateMetricBoard(boardDefinition);
-                continue;
-            }
-            this.clearBoardDisplayPrefix(boardDefinition.rolePrefix());
-        }
     }
 
-    private void updateMetricBoard(BackendBoardDefinition boardDefinition) {
-        String string = boardDefinition.dataKey();
-        String string2 = boardDefinition.rolePrefix();
-        String string5 = boardDefinition.configPath();
-        if (!this.boardConfig.enabled(boardDefinition.dataKey())) {
-            this.clearBoardDisplayPrefix(string2);
+    private void updateHudDisplay(BackendHudDefinition hudDefinition) {
+        if (hudDefinition.usesPlaytime()) {
+            this.updateStayedCloseDisplay(hudDefinition);
+            return;
+        }
+        this.updateMetricHudDisplay(hudDefinition);
+    }
+
+    private void updateMetricHudDisplay(BackendHudDefinition hudDefinition) {
+        String string = hudDefinition.dataKey();
+        String string2 = hudDefinition.rolePrefix();
+        String string5 = hudDefinition.configPath();
+        if (!this.hudConfig.enabled(hudDefinition.dataKey())) {
+            this.clearHudDisplayPrefix(string2);
             return;
         }
         BackendDisplayPlacementService.Placement placement = this.displayPlacementService.hudPlacement(this.backendDisplayConfig(), string5, this.placeSpawnWorld(this.currentServer));
@@ -9409,21 +9385,21 @@ PluginMessageListener {
         Location location = this.backendDisplayLocation(world, placement);
         this.forceLoadBackendDisplayLocation(world, location);
         this.clearDisplayBoard(world, location, role -> role != null && role.startsWith(string2));
-        int n = this.boardConfig.top(boardDefinition.dataKey());
+        int n = this.hudConfig.top(hudDefinition.dataKey());
         List<HudRank> list = this.readHudTop(string, n);
         ArrayList<BackendHudDisplayService.Rank> arrayList = new ArrayList<BackendHudDisplayService.Rank>();
         for (HudRank hudRank : list) {
             arrayList.add(new BackendHudDisplayService.Rank(hudRank.name, hudRank.score));
         }
-        BackendHudDisplayService.Board board = new BackendHudDisplayService.Board(string5, string2, boardDefinition.defaultTitle(), boardDefinition.defaultSubtitle(), boardDefinition.defaultBottomLine());
-        BackendDisplayModel displayModel = this.hudDisplayService.model(this.backendDisplayConfig(), board, arrayList);
+        BackendHudDisplayService.Hud hud = new BackendHudDisplayService.Hud(string5, string2, hudDefinition.defaultTitle(), hudDefinition.defaultSubtitle(), hudDefinition.defaultBottomLine());
+        BackendDisplayModel displayModel = this.hudDisplayService.model(this.backendDisplayConfig(), hud, arrayList);
         for (BackendDisplayModel.Entry entry : displayModel.entries()) {
             this.updateBoardDisplayRole(world, this.stayedCloseLocation(location, entry.offsetX(), entry.offsetY(), entry.offsetZ()), entry.role(), string5, this.backendDisplayComponent(entry), this.backendDisplayAlignment(entry.alignment()));
         }
     }
 
     private BackendDisplayConfig backendDisplayConfig() {
-        return this.boardConfig;
+        return this.hudConfig;
     }
 
     private Component backendDisplayComponent(BackendDisplayModel.Entry entry) {
@@ -9440,11 +9416,11 @@ PluginMessageListener {
         return TextDisplay.TextAlignment.CENTER;
     }
 
-    private void updateStayedCloseDisplay() {
-        if (this.currentServer != ServerId.LOBBY || !this.boardConfig.enabled(BackendBoardConfig.STAYED_CLOSE)) {
+    private void updateStayedCloseDisplay(BackendHudDefinition hudDefinition) {
+        if (!hudDefinition.enabledOn(this.currentServer.proxyName) || !this.hudConfig.enabled(hudDefinition.dataKey())) {
             return;
         }
-        BackendDisplayPlacementService.Placement placement = this.displayPlacementService.stayedClosePlacement(this.backendDisplayConfig(), this.placeSpawnWorld(ServerId.LOBBY));
+        BackendDisplayPlacementService.Placement placement = this.displayPlacementService.hudPlacement(this.backendDisplayConfig(), hudDefinition.configPath(), this.placeSpawnWorld(ServerId.LOBBY));
         World world = Bukkit.getWorld((String)placement.worldName());
         if (world == null) {
             return;
@@ -9457,7 +9433,7 @@ PluginMessageListener {
         for (StayedCloseRank stayedCloseRank : list) {
             arrayList.add(new BackendStayedCloseDisplayService.Rank(stayedCloseRank.name, stayedCloseRank.totalSeconds));
         }
-        BackendDisplayModel displayModel = this.stayedCloseDisplayService.model(this.backendDisplayConfig(), arrayList);
+        BackendDisplayModel displayModel = this.stayedCloseDisplayService.model(this.backendDisplayConfig(), hudDefinition.configPath(), arrayList);
         if (!displayModel.bedrockEnabled()) {
             this.clearStayedCloseBedrockDisplays();
         }
@@ -9467,7 +9443,7 @@ PluginMessageListener {
     }
 
     private Display.Billboard stayedCloseBillboard() {
-        String string = this.boardConfig.stringValue("boards.stayed-close.display.billboard", "fixed").trim().toLowerCase(Locale.ROOT);
+        String string = this.hudConfig.stringValue("hud.stayed-close.display.billboard", "fixed").trim().toLowerCase(Locale.ROOT);
         if ("center".equals(string)) {
             return Display.Billboard.CENTER;
         }
@@ -9513,10 +9489,7 @@ PluginMessageListener {
         } else {
             textDisplay.teleport(location);
         }
-        boolean bl = this.isBedrockStayedCloseRole(string);
-        boolean bl2 = STAYED_CLOSE_BOTTOM_DISPLAY.equals(string);
-        boolean bl3 = STAYED_CLOSE_BEDROCK_BOTTOM_DISPLAY.equals(string);
-        this.applyBackendDisplayEntity(textDisplay, component, textAlignment, this.displayEntityService.stayedCloseStyle(this.backendDisplayConfig(), string, bl, bl2, bl3));
+        this.applyBackendDisplayEntity(textDisplay, component, textAlignment, this.displayEntityService.hudStyle(this.backendDisplayConfig(), "hud.stayed-close", string));
         this.updateStayedCloseDisplayVisibility(textDisplay, string);
     }
 
@@ -9556,8 +9529,12 @@ PluginMessageListener {
         return this.displayBoardLifecycleService.findUniqueDisplay(world, string, this::displayRole);
     }
 
-    private void clearBoardDisplayPrefix(String string) {
-        this.displayBoardLifecycleService.clearDisplays(Bukkit.getWorlds(), this::displayRole, role -> role.startsWith(string));
+    private void clearHudDisplayPrefix(String string) {
+        if ("stayed_close_".equals(string)) {
+            this.clearStayedCloseDisplays();
+            return;
+        }
+        this.displayBoardLifecycleService.clearDisplays(Bukkit.getWorlds(), this::displayRole, role -> role != null && role.startsWith(string));
     }
 
     private void clearDisplayBoard(World world, Location location, Predicate<String> predicate) {
@@ -9579,7 +9556,7 @@ PluginMessageListener {
 
     private void updateBoardDisplayVisibility(TextDisplay textDisplay, String string, String string2) {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (!this.displayVisibilityService.hudVisible(string, this.boardConfig.bedrockEnabledAtPath(string2), this.isBedrockPlayer(player))) {
+            if (!this.displayVisibilityService.hudVisible(string, this.hudConfig.bedrockEnabledAtPath(string2), this.isBedrockPlayer(player))) {
                 player.hideEntity((Plugin)this, (Entity)textDisplay);
                 continue;
             }
@@ -9608,7 +9585,7 @@ PluginMessageListener {
     }
 
     private void updateStayedCloseDisplayVisibility(Player player, Entity entity, String string) {
-        if (!this.displayVisibilityService.stayedCloseVisible(string, this.boardConfig.bedrockEnabled(BackendBoardConfig.STAYED_CLOSE), this.isBedrockPlayer(player))) {
+        if (!this.displayVisibilityService.stayedCloseVisible(string, this.hudConfig.bedrockEnabled(BackendHudConfig.STAYED_CLOSE), this.isBedrockPlayer(player))) {
             player.hideEntity((Plugin)this, entity);
             return;
         }
@@ -9642,7 +9619,7 @@ PluginMessageListener {
     private List<StayedCloseRank> readStayedCloseTop() {
         File file = this.runtimeLayout.dataFile("playtime.yml");
         ArrayList<StayedCloseRank> arrayList = new ArrayList<StayedCloseRank>();
-        int n = this.boardConfig.top(BackendBoardConfig.STAYED_CLOSE);
+        int n = this.hudConfig.top(BackendHudConfig.STAYED_CLOSE);
         for (BackendStayedClosePlaytimeService.Rank rank : this.stayedClosePlaytimeService.top(file, n)) {
             arrayList.add(new StayedCloseRank(rank.name(), rank.totalSeconds()));
         }
@@ -10198,31 +10175,31 @@ PluginMessageListener {
             this.hudDataService.recordStat(this.hudData, string, player, l, string3, l2);
             this.saveHudData();
         }
-        BackendBoardDefinition boardDefinition = this.boardDefinition(string);
-        if (boardDefinition != null && boardDefinition.enabledOn(this.currentServer.proxyName)) {
-            this.updateMetricBoards();
+        BackendHudDefinition hudDefinition = this.hudDefinition(string);
+        if (hudDefinition != null && !hudDefinition.usesPlaytime() && hudDefinition.enabledOn(this.currentServer.proxyName)) {
+            this.updateMetricHudDisplays();
         }
     }
 
     private void recordMadeRoomSandboxAction(Player player, long l) {
-        BackendBoardDefinition boardDefinition = this.boardDefinition("made-room");
-        if (player == null || l <= 0L || this.hudData == null || boardDefinition == null) {
+        BackendHudDefinition hudDefinition = this.hudDefinition("made-room");
+        if (player == null || l <= 0L || this.hudData == null || hudDefinition == null) {
             return;
         }
         synchronized (this.hudIoLock) {
             this.reloadHudDataFromDisk();
-            this.hudDataService.recordSandboxAction(this.hudData, boardDefinition.dataKey(), player, l, boardDefinition.trackBlocksChanged() && this.boardConfig.trackBlocksChanged(boardDefinition.dataKey()));
+            this.hudDataService.recordSandboxAction(this.hudData, hudDefinition.dataKey(), player, l, hudDefinition.trackBlocksChanged() && this.hudConfig.trackBlocksChanged(hudDefinition.dataKey()));
             this.saveHudData();
         }
-        if (boardDefinition.enabledOn(this.currentServer.proxyName)) {
-            this.updateMetricBoards();
+        if (hudDefinition.enabledOn(this.currentServer.proxyName)) {
+            this.updateMetricHudDisplays();
         }
     }
 
-    private BackendBoardDefinition boardDefinition(String string) {
-        for (BackendBoardDefinition boardDefinition : BOARD_DEFINITIONS) {
-            if (boardDefinition.dataKey().equals(string)) {
-                return boardDefinition;
+    private BackendHudDefinition hudDefinition(String string) {
+        for (BackendHudDefinition hudDefinition : HUD_DEFINITIONS) {
+            if (hudDefinition.dataKey().equals(string)) {
+                return hudDefinition;
             }
         }
         return null;

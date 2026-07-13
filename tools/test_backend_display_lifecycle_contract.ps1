@@ -43,7 +43,7 @@ foreach ($required in @(
     "private BackendDisplayBoardLifecycleService displayBoardLifecycleService",
     "this.displayBoardLifecycleService = new BackendDisplayBoardLifecycleService()",
     "return this.displayBoardLifecycleService.findUniqueDisplay(world, string, this::displayRole)",
-    "this.displayBoardLifecycleService.clearDisplays(Bukkit.getWorlds(), this::displayRole, role -> role.startsWith(string))",
+    "this.displayBoardLifecycleService.clearDisplays(Bukkit.getWorlds(), this::displayRole, role -> role != null && role.startsWith(string))",
     "this.displayBoardLifecycleService.clearDisplayBoard(world, location, this::displayRole, predicate, this::isNearDisplayBase)",
     "this.displayBoardLifecycleService.clearDisplays(Bukkit.getWorlds(), this::displayRole, role -> this.isStayedCloseDisplayRole(role) || this.isLegacyStayedCloseDisplayRole(role))",
     "this.displayBoardLifecycleService.clearDisplays(Bukkit.getWorlds(), this::currentDisplayRole, this::isBedrockStayedCloseRole)",

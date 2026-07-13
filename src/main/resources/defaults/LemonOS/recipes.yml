@@ -1,0 +1,12 @@
+# LemonOS Recipe Book policy.
+# Unlock-all is enabled for player worlds and disabled for Lobby.
+package:
+  name: Honey
+  version: '26.2'
+lemonos:
+  version: 1.0
+
+recipe-book:
+  unlock-all:
+    survival: true
+    creative: true

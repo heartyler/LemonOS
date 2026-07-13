@@ -40,7 +40,7 @@ foreach ($required in @(
     "private BackendStayedClosePlaytimeService stayedClosePlaytimeService",
     "this.stayedClosePlaytimeService = new BackendStayedClosePlaytimeService()",
     "this.runtimeLayout.dataFile(`"playtime.yml`")",
-    "this.boardConfig.top(BackendBoardConfig.STAYED_CLOSE)",
+    "this.hudConfig.top(BackendHudConfig.STAYED_CLOSE)",
     "for (BackendStayedClosePlaytimeService.Rank rank : this.stayedClosePlaytimeService.top(file, n))",
     "arrayList.add(new StayedCloseRank(rank.name(), rank.totalSeconds()))"
 )) {

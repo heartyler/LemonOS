@@ -1,12 +1,12 @@
-# LemonOS world display boards.
-# enabled controls rendering only; statistics continue to accumulate while a board is hidden.
+# LemonOS HUD definitions.
+# Metric HUD statistics continue while hidden; Stayed Close uses enabled as its collection gate too.
 package:
   name: Honey
   version: '26.2'
 lemonos:
   version: 1.0
 
-boards:
+hud:
   stayed-close:
     enabled: false
     title: Stayclose

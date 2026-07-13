@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path -LiteralPath $Root).Path
 $TemplateRoot = Join-Path $Root "templates\runtime\LemonOS"
 $ResourceRoot = Join-Path $Root "src\main\resources\defaults\LemonOS"
-foreach ($name in @("config.yml", "messages.yml", "places.yml", "sandbox.yml", "survival.yml", "boards.yml", "atmosphere.yml")) {
+foreach ($name in @("config.yml", "messages.yml", "places.yml", "sandbox.yml", "survival.yml", "hud.yml", "atmosphere.yml", "recipes.yml")) {
     $template = Join-Path $TemplateRoot $name
     $resource = Join-Path $ResourceRoot $name
     if (-not (Test-Path -LiteralPath $resource -PathType Leaf)) {
@@ -19,17 +19,17 @@ foreach ($name in @("config.yml", "messages.yml", "places.yml", "sandbox.yml", "
     }
 }
 
-$boards = Get-Content -Raw -LiteralPath (Join-Path $TemplateRoot "boards.yml")
+$hud = Get-Content -Raw -LiteralPath (Join-Path $TemplateRoot "hud.yml")
 $atmosphere = Get-Content -Raw -LiteralPath (Join-Path $TemplateRoot "atmosphere.yml")
 foreach ($required in @(
-    "boards.stayed-close.display.bedrock.bottom-line-width",
-    "boards.made-room.scoring.track-blocks-changed",
+    "hud.stayed-close.display.bedrock.bottom-line-width",
+    "hud.made-room.scoring.track-blocks-changed",
     "atmosphere.activity.session-minutes.cooldown-seconds",
     "atmosphere.music.track-seconds.MUSIC_DISC_OTHERSIDE"
 )) {
     $parts = $required.Split('.')
     $leaf = $parts[-1] + ":"
-    $document = if ($required.StartsWith("boards.")) { $boards } else { $atmosphere }
+    $document = if ($required.StartsWith("hud.")) { $hud } else { $atmosphere }
     if (-not $document.Contains($leaf)) { throw "Canonical preset missing final default: $required" }
 }
 

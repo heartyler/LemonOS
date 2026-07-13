@@ -50,15 +50,15 @@ foreach ($required in @(
 foreach ($required in @(
     "private BackendHudDataService hudDataService",
     "this.hudDataService = new BackendHudDataService()",
-    "return this.hudDataService.ensureDefaults(this.hudData, this.boardDataKeys())",
-    "private List<String> boardDataKeys()",
-    "arrayList.add(boardDefinition.dataKey())",
+    "return this.hudDataService.ensureDefaults(this.hudData, this.hudDataKeys())",
+    "private List<String> hudDataKeys()",
+    "if (!hudDefinition.usesPlaytime()) arrayList.add(hudDefinition.dataKey())",
     "for (BackendHudDataService.Rank rank : this.hudDataService.top(this.hudData, string, n))",
     "arrayList.add(new HudRank(rank.name(), rank.score()))",
     "this.hudDataService.recordStat(this.hudData, string, player, l, string3, l2)",
-    "this.hudDataService.recordSandboxAction(this.hudData, boardDefinition.dataKey(), player, l, boardDefinition.trackBlocksChanged() && this.boardConfig.trackBlocksChanged(boardDefinition.dataKey()))",
+    "this.hudDataService.recordSandboxAction(this.hudData, hudDefinition.dataKey(), player, l, hudDefinition.trackBlocksChanged() && this.hudConfig.trackBlocksChanged(hudDefinition.dataKey()))",
     "this.saveHudData()",
-    "this.updateMetricBoards()"
+    "this.updateMetricHudDisplays()"
 )) {
     if (-not $backend.Contains($required)) {
         throw "LemonOSPlugin is not wired through BackendHudDataService: $required"

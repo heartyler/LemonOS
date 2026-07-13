@@ -1,5 +1,5 @@
 # LemonOS shared core config.
-# Feature presets live in boards.yml, atmosphere.yml, sandbox.yml, and survival.yml.
+# Feature presets live in hud.yml, atmosphere.yml, sandbox.yml, and survival.yml.
 package:
   name: Honey
   version: '26.2'
