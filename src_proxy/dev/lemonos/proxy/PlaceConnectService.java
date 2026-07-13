@@ -45,10 +45,10 @@ final class PlaceConnectService {
             return;
         }
         int port = this.runtimeProbe.port(place);
-        if (canProxyWake(place) && port > 0 && !this.runtimeProbe.canConnect(port)) {
+        if (canProxyWake(place) && port > 0 && !this.runtimeProbe.canConnect(place)) {
             String status = this.statusRepository.status(place);
             if (PlaceStatusRepository.isWakeStatus(status) || PlaceStatusRepository.isReadyStatus(status)) {
-                this.wakeStarter.wakeAndConnect(serverConnection, player.get(), registeredServer.get(), uuid, place, port);
+                this.wakeStarter.wakeAndConnect(serverConnection, player.get(), registeredServer.get(), uuid, place);
                 return;
             }
         }
@@ -91,6 +91,6 @@ final class PlaceConnectService {
     }
 
     interface WakeStarter {
-        void wakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place, int port);
+        void wakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place);
     }
 }

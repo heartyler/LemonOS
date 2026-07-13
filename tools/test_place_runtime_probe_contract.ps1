@@ -1,5 +1,6 @@
 param(
-    [string]$Root = (Resolve-Path ".").Path
+    [string]$Root = (Resolve-Path ".").Path,
+    [string]$JdkRoot = $(if ($env:JAVA_HOME) { $env:JAVA_HOME } else { "C:\Program Files\Java\jdk-26.0.1" })
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,14 +17,20 @@ $proxy = Get-Content -Raw -LiteralPath $proxyPath
 
 foreach ($required in @(
     "final class PlaceRuntimeProbe",
+    "interface AddressResolver",
+    "AddressResolver addressResolver",
     "int port(String place)",
-    "boolean canConnect(int port)",
+    "boolean canConnect(String place)",
     "boolean startServer(String place)",
-    "new InetSocketAddress(`"127.0.0.1`", port), 300",
-    'resolve(".honeydock").resolve("launchers").resolve(place + ".bat")',
+    "socket.connect(address, 300)",
+    "resolved.isLoopbackAddress()",
+    "reportedResolutionFailures",
+    "server is not registered in Velocity",
+    "registered address is not loopback",
+    'resolve(".honeydock").resolve("launchers").resolve(normalizedPlace + ".bat")',
     'resolve("honeydock.bat")',
-    "startHoneyDockLauncher(place, launcher, serverDirectory)",
-    "startHoneyDockEntrypoint(place, entrypoint)",
+    "startHoneyDockLauncher(normalizedPlace, launcher, serverDirectory)",
+    "startHoneyDockEntrypoint(normalizedPlace, entrypoint)",
     "Start-Process -FilePath 'cmd.exe'",
     "powerShellLiteral(launcher.toString())",
     "powerShellLiteral(serverDirectory.toString())",
@@ -40,13 +47,13 @@ if ($probe.Contains('resolve(place).resolve("start.bat")')) {
     throw "PlaceRuntimeProbe must not depend on per-server start.bat files."
 }
 
-foreach ($requiredPort in @(
+foreach ($forbiddenPort in @(
     'return 30066;',
     'return 30067;',
     'return 30068;'
 )) {
-    if (-not $probe.Contains($requiredPort)) {
-        throw "PlaceRuntimeProbe missing expected port mapping: $requiredPort"
+    if ($probe.Contains($forbiddenPort)) {
+        throw "PlaceRuntimeProbe must not hardcode a runtime port mapping: $forbiddenPort"
     }
 }
 
@@ -67,11 +74,25 @@ if ($probe.Contains("com.velocitypowered.api.proxy.Player") -or
     throw "PlaceRuntimeProbe must not depend on Velocity runtime objects."
 }
 
-if ($proxy -notmatch "new PlaceRuntimeProbe\(this\.sharedDataFolder\.getParent\(\), this\.logger\)" -or
+if (-not $proxy.Contains("new PlaceRuntimeProbe(this.sharedDataFolder.getParent(), this.logger, place -> this.server.getServer(place)") -or
     $proxy -notmatch "this\.placeRuntimeProbe\.port\(string\)" -or
-    $proxy -notmatch "this\.placeRuntimeProbe\.canConnect\(n\)" -or
+    $proxy -notmatch "this\.placeRuntimeProbe\.canConnect\(string\)" -or
     $proxy -notmatch "this\.placeRuntimeProbe\.startServer\(string\)") {
     throw "LemonOSProxyPlugin is not wired through PlaceRuntimeProbe."
 }
+
+$Classes = Join-Path $Root "build\test-place-runtime-probe"
+$VelocityJar = Join-Path $Root "third_party\runtime\velocity.jar"
+if (-not (Test-Path -LiteralPath $VelocityJar -PathType Leaf)) {
+    throw "Velocity test dependency missing. Run tools\restore_test_dependencies.ps1."
+}
+if (Test-Path -LiteralPath $Classes) { Remove-Item -LiteralPath $Classes -Recurse -Force }
+New-Item -ItemType Directory -Path $Classes -Force | Out-Null
+& (Join-Path $JdkRoot "bin\javac.exe") -Xlint:all -Werror -encoding UTF-8 -cp $VelocityJar -d $Classes `
+    $probePath `
+    (Join-Path $Root "tools\java\dev\lemonos\proxy\PlaceRuntimeProbeHarness.java")
+if ($LASTEXITCODE -ne 0) { throw "PlaceRuntimeProbe behavior harness compilation failed." }
+& (Join-Path $JdkRoot "bin\java.exe") -cp "$Classes;$VelocityJar" dev.lemonos.proxy.PlaceRuntimeProbeHarness
+if ($LASTEXITCODE -ne 0) { throw "PlaceRuntimeProbe behavior harness failed." }
 
 Write-Host "LemonOS place runtime probe contract tests passed."

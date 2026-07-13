@@ -35,7 +35,7 @@ final class PlaceWakeService {
         this.resultSender = resultSender;
     }
 
-    void wakeOnly(String place, int port) {
+    void wakeOnly(String place) {
         boolean shouldWake;
         synchronized (this.wakingServers) {
             shouldWake = this.wakingServers.add(place);
@@ -51,10 +51,10 @@ final class PlaceWakeService {
             this.statusRepository.setStatus(place, "unavailable");
             return;
         }
-        CompletableFuture.runAsync(() -> this.waitForWakeStatus(place, port));
+        CompletableFuture.runAsync(() -> this.waitForWakeStatus(place));
     }
 
-    void wakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place, int port) {
+    void wakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place) {
         boolean shouldWake;
         synchronized (this.wakingServers) {
             shouldWake = this.wakingServers.add(place);
@@ -74,17 +74,17 @@ final class PlaceWakeService {
                 return;
             }
         }
-        CompletableFuture.runAsync(() -> this.waitForWakeAndConnect(serverConnection, player, registeredServer, uuid, place, port));
+        CompletableFuture.runAsync(() -> this.waitForWakeAndConnect(serverConnection, player, registeredServer, uuid, place));
     }
 
-    private void waitForWakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place, int port) {
+    private void waitForWakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place) {
         long deadline = System.currentTimeMillis() + 120000L;
         try {
             while (System.currentTimeMillis() <= deadline) {
                 if (!this.server.getPlayer(uuid).isPresent()) {
                     return;
                 }
-                if (this.runtimeProbe.canConnect(port)) {
+                if (this.runtimeProbe.canConnect(place)) {
                     this.scheduler.schedule(() -> {
                         this.statusRepository.setStatus(place, "ready");
                         if (this.server.getPlayer(uuid).isPresent()) {
@@ -118,11 +118,11 @@ final class PlaceWakeService {
         }
     }
 
-    private void waitForWakeStatus(String place, int port) {
+    private void waitForWakeStatus(String place) {
         long deadline = System.currentTimeMillis() + 120000L;
         try {
             while (System.currentTimeMillis() <= deadline) {
-                if (this.runtimeProbe.canConnect(port)) {
+                if (this.runtimeProbe.canConnect(place)) {
                     this.statusRepository.setStatus(place, "ready");
                     return;
                 }
