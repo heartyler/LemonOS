@@ -1,5 +1,7 @@
 package dev.lemonos;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.bukkit.configuration.file.FileConfiguration;
 
 /** Typed ownership boundary for LemonOS/atmosphere.yml. */
@@ -27,6 +29,14 @@ final class BackendAtmosphereConfig {
     String musicDisplayName(String key, String fallback) { return this.string("music.display-names." + key, fallback); }
     int musicWeight(String key) { return this.integer("music.weight." + key, 0, 0, 100); }
     int musicTrackSeconds(String key) { return this.integer("music.track-seconds." + key, 180, 30, 600); }
+    List<String> musicTracks(String key) {
+        if (this.source == null || key == null || key.isBlank()) return List.of();
+        ArrayList<String> tracks = new ArrayList<String>();
+        for (String track : this.source.getStringList(ROOT + "music.tracks." + key)) {
+            if (track != null && !track.isBlank()) tracks.add(track.trim());
+        }
+        return List.copyOf(tracks);
+    }
     boolean activityEnabled() { return this.bool("activity.enabled", true); }
     boolean activityTriggerEnabled(String key) { return this.bool("activity." + key + ".enabled", true); }
     int activityGlobalCooldownSeconds() { return this.integer("activity.global-cooldown-seconds", 90, 0, 3600); }

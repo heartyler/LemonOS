@@ -4,6 +4,7 @@ $Source = Join-Path $Root "src\main\java\dev\lemonos"
 $Plugin = Get-Content -Raw -LiteralPath (Join-Path $Source "LemonOSPlugin.java")
 $Boards = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendBoardLifecycleService.java")
 $Atmosphere = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendAtmosphereLifecycleService.java")
+$Music = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendAtmosphereMusicLifecycleService.java")
 $Shared = Get-Content -Raw -LiteralPath (Join-Path $Source "BackendRepeatingLifecycleService.java")
 
 foreach ($snippet in @(
@@ -22,14 +23,18 @@ foreach ($snippet in @(
 
 if (-not $Boards.Contains("extends BackendRepeatingLifecycleService")) { throw "Boards does not own a typed lifecycle boundary." }
 if (-not $Atmosphere.Contains("extends BackendRepeatingLifecycleService")) { throw "Atmosphere does not own a typed lifecycle boundary." }
+if (-not $Music.Contains("extends BackendRepeatingLifecycleService")) { throw "Lobby music does not own a typed lifecycle boundary." }
 
 foreach ($snippet in @(
     "private BackendBoardLifecycleService boardLifecycleService;",
     "private BackendAtmosphereLifecycleService atmosphereLifecycleService;",
+    "private BackendAtmosphereMusicLifecycleService atmosphereMusicLifecycleService;",
     "this.boardLifecycleService.stop();",
     "this.atmosphereLifecycleService.stop();",
+    "this.atmosphereMusicLifecycleService.stop();",
     "this.boardLifecycleService.start(40L, plan.periodTicks(), this::updateBoards);",
-    'this.atmosphereLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks(), () -> this.runActionBarProducer("atmosphere", this::tickAtmosphere));'
+    'this.atmosphereLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks(), () -> this.runActionBarProducer("atmosphere", this::tickAtmosphere));',
+    'this.atmosphereMusicLifecycleService.start(schedule.initialDelayTicks(), schedule.periodTicks()'
 )) {
     if (-not $Plugin.Contains($snippet)) { throw "Plugin lifecycle wiring missing: $snippet" }
 }

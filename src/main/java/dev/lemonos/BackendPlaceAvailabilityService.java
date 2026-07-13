@@ -26,13 +26,13 @@ final class BackendPlaceAvailabilityService<S> {
         }
     }
 
-    void refresh(Map<S, Boolean> availability, Iterable<S> servers, S currentServer, FileConfiguration places, Function<S, String> proxyName, ToIntFunction<S> port) {
+    void refresh(Map<S, Boolean> availability, Iterable<S> servers, S currentServer, ToIntFunction<S> port) {
         for (S server : servers) {
             if (Objects.equals(server, currentServer)) {
                 availability.put(server, true);
                 continue;
             }
-            availability.put(server, this.ready(places, server, proxyName) && this.canConnect(port.applyAsInt(server)));
+            availability.put(server, this.canConnect(port.applyAsInt(server)));
         }
     }
 

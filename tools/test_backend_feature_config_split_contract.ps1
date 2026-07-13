@@ -19,16 +19,19 @@ $pluginRequired = @(
     "private void updateBoards()",
     'this.boardOrchestrationService.plan(this.currentServer.proxyName, this.boardConfig, BOARD_DEFINITIONS)',
     "this.atmosphereOrchestrationService.schedule(this.currentServer == ServerId.SURVIVAL, this.atmosphereConfig)",
-    "this.atmosphereOrchestrationService.shouldTick(this.atmosphereConfig, this.resting(), this.restSuspendAtmosphere())"
+    "this.atmosphereOrchestrationService.shouldTick(this.atmosphereConfig, this.resting(), this.restSuspendAtmosphere())",
+    "return this.atmosphereConfig.musicTracks(string);"
 )
 foreach ($snippet in $pluginRequired) { if (-not $Plugin.Contains($snippet)) { throw "Feature config split missing: $snippet" } }
 
 foreach ($snippet in @(
     "this.featureMigrationService.migrateBoards(",
-    "this.featureMigrationService.migrateAtmosphere("
+    "this.featureMigrationService.migrateAtmosphere(",
+    'if (atmosphereSaved && target.config().contains("atmosphere"))',
+    'target.config().set("atmosphere", null)'
 )) { if (-not $Orchestrator.Contains($snippet)) { throw "Feature config orchestration missing: $snippet" } }
 
-$forbiddenPlugin = @("startStayedCloseTask()", "startHudScoreboardTask()", "atmosphereServerEnabled()", '"atmosphere.servers.creative"', '"atmosphere.servers.survival"')
+$forbiddenPlugin = @("startStayedCloseTask()", "startHudScoreboardTask()", "atmosphereServerEnabled()", '"atmosphere.servers.creative"', '"atmosphere.servers.survival"', 'this.config.getStringList("atmosphere.music.tracks.')
 foreach ($snippet in $forbiddenPlugin) { if ($Plugin.Contains($snippet)) { throw "Removed feature architecture remains: $snippet" } }
 
 $migrationRequired = @(
