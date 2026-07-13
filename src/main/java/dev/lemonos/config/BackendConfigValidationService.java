@@ -16,10 +16,11 @@ public final class BackendConfigValidationService {
 
     public void validate(
             FileConfiguration config,
-            FileConfiguration boards,
+            FileConfiguration hud,
             FileConfiguration atmosphere,
             FileConfiguration sandbox,
             FileConfiguration survival,
+            FileConfiguration recipes,
             FileConfiguration places,
             List<PlacePolicy> placePolicies) {
         this.warnStringValue(config, "config.yml", "server", "auto", "backend identity should be detected from the runtime server folder");
@@ -30,12 +31,12 @@ public final class BackendConfigValidationService {
         this.warnBooleanValue(config, "config.yml", "ui.hidden-command-suggestions", true, "this is part of command protection and player-facing UX");
         this.warnClampedInt(config, "config.yml", "auth.session-minutes", 0, 10080);
         this.warnClampedInt(config, "config.yml", "tab.update-ticks", 5, 1200);
-        this.warnClampedInt(boards, "boards.yml", "boards.stayed-close.refresh-minutes", 1, 1440);
-        this.warnClampedInt(boards, "boards.yml", "boards.stayed-close.top", 1, 10);
-        this.warnClampedInt(boards, "boards.yml", "boards.stayed-close.name-width", 4, 16);
-        this.warnClampedInt(boards, "boards.yml", "boards.stayed-close.display.background-alpha", 0, 255);
-        this.warnClampedInt(boards, "boards.yml", "boards.stayed-close.display.view-range", 1, 128);
-        this.warnClampedInt(boards, "boards.yml", "boards.stayed-close.display.line-width", 60, 500);
+        this.warnClampedInt(hud, "hud.yml", "hud.stayed-close.refresh-minutes", 1, 1440);
+        this.warnClampedInt(hud, "hud.yml", "hud.stayed-close.top", 1, 10);
+        this.warnClampedInt(hud, "hud.yml", "hud.stayed-close.name-width", 4, 16);
+        this.warnClampedInt(hud, "hud.yml", "hud.stayed-close.display.background-alpha", 0, 255);
+        this.warnClampedInt(hud, "hud.yml", "hud.stayed-close.display.view-range", 1, 128);
+        this.warnClampedInt(hud, "hud.yml", "hud.stayed-close.display.line-width", 60, 500);
         this.warnClampedInt(atmosphere, "atmosphere.yml", "atmosphere.actionbar.duration-seconds", 1, 10);
         this.warnClampedInt(atmosphere, "atmosphere.yml", "atmosphere.actionbar.repeat-seconds", 1, 5);
         this.warnClampedInt(atmosphere, "atmosphere.yml", "atmosphere.actionbar.cooldown-seconds", 10, 600);
@@ -62,6 +63,8 @@ public final class BackendConfigValidationService {
         this.warnClampedInt(survival, "survival.yml", "survival.auto-plant.sugar-cane.radius", 0, 32);
         this.warnClampedInt(survival, "survival.yml", "survival.auto-plant.cactus.radius", 0, 32);
         this.warnClampedInt(survival, "survival.yml", "survival.auto-plant.kelp.radius", 0, 32);
+        this.warnBooleanType(recipes, "recipes.yml", "recipe-book.unlock-all.survival");
+        this.warnBooleanType(recipes, "recipes.yml", "recipe-book.unlock-all.creative");
         for (PlacePolicy placePolicy : placePolicies) {
             String path = "places." + placePolicy.serverId();
             this.warnStringValue(places, "places.yml", path + ".server", placePolicy.serverId(), "place server metadata should match Honey's fixed backend id");
@@ -82,6 +85,12 @@ public final class BackendConfigValidationService {
     private void warnBooleanValue(FileConfiguration configuration, String fileName, String path, boolean expected, String policy) {
         if (configuration != null && configuration.isSet(path) && configuration.getBoolean(path, expected) != expected) {
             this.warnPolicy(fileName, path, policy + "; expected " + expected + ".");
+        }
+    }
+
+    private void warnBooleanType(FileConfiguration configuration, String fileName, String path) {
+        if (configuration != null && configuration.isSet(path) && !configuration.isBoolean(path)) {
+            this.warnPolicy(fileName, path, "value must be true or false; invalid values disable this policy.");
         }
     }
 

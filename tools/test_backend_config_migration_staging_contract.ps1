@@ -9,8 +9,13 @@ $Harness = Get-Content -Raw -LiteralPath (Join-Path $Root "tools\java\dev\lemono
 $Runner = Get-Content -Raw -LiteralPath (Join-Path $Root "tools\run_backend_config_migration_staging.ps1")
 foreach ($required in @(
     'run_backend_config_migration_staging.ps1',
-    'assertValue(boards, "boards.stayed-close.title", "Legacy Stayclose")',
+    'assertValue(hud, "hud.stayed-close.title", "Legacy Stayclose")',
+    'verifyOrchestratedMigration',
+    'Failed HUD persistence removed a backward-compatible source.',
+    'Failed Recipe Book persistence removed the legacy Survival policy.',
+    'Legacy HUD roots survived a successful canonical migration.',
     'assertValue(atmosphere, "atmosphere.enabled", false)',
+    'assertValue(recipes, "recipe-book.unlock-all.creative", true)',
     'if (secondPassChanged)',
     'BackendConfigMigrationStagingHarness'
 )) {

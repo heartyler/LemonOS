@@ -2,18 +2,19 @@ param([string]$Root = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCo
 $ErrorActionPreference = "Stop"
 $SourceRoot = Join-Path $Root "src\main\java\dev\lemonos"
 $Plugin = Get-Content -Raw -LiteralPath (Join-Path $SourceRoot "LemonOSPlugin.java")
-$Boards = Get-Content -Raw -LiteralPath (Join-Path $SourceRoot "BackendBoardConfig.java")
+$Hud = Get-Content -Raw -LiteralPath (Join-Path $SourceRoot "BackendHudConfig.java")
 $Atmosphere = Get-Content -Raw -LiteralPath (Join-Path $SourceRoot "BackendAtmosphereConfig.java")
 
 foreach ($snippet in @(
-    "final class BackendBoardConfig implements BackendDisplayConfig",
+    "final class BackendHudConfig implements BackendDisplayConfig",
     'static final String STAYED_CLOSE = "stayed-close"',
-    "boolean enabled(String boardKey)",
-    "int refreshMinutes(String boardKey)",
-    "int top(String boardKey)",
-    "boolean trackBlocksChanged(String boardKey)"
+    'return "hud." + hudKey',
+    "boolean enabled(String hudKey)",
+    "int refreshMinutes(String hudKey)",
+    "int top(String hudKey)",
+    "boolean trackBlocksChanged(String hudKey)"
 )) {
-    if (-not $Boards.Contains($snippet)) { throw "Typed board config missing: $snippet" }
+    if (-not $Hud.Contains($snippet)) { throw "Typed HUD config missing: $snippet" }
 }
 
 foreach ($snippet in @(
@@ -27,10 +28,10 @@ foreach ($snippet in @(
 }
 
 foreach ($snippet in @(
-    "private static final List<BackendBoardDefinition> BOARD_DEFINITIONS",
-    "private void updateMetricBoards()",
-    "private void updateMetricBoard(BackendBoardDefinition boardDefinition)",
-    "return this.boardConfig;",
+    "private static final List<BackendHudDefinition> HUD_DEFINITIONS",
+    "private void updateHudDisplays()",
+    "private void updateHudDisplay(BackendHudDefinition hudDefinition)",
+    "return this.hudConfig;",
     "return this.atmosphereConfig.enabled();"
 )) {
     if (-not $Plugin.Contains($snippet)) { throw "Typed feature wiring missing: $snippet" }

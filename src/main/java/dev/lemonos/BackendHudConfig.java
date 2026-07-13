@@ -2,8 +2,8 @@ package dev.lemonos;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
-/** Typed ownership boundary for LemonOS/boards.yml. */
-final class BackendBoardConfig implements BackendDisplayConfig {
+/** Typed ownership boundary for LemonOS/hud.yml. */
+final class BackendHudConfig implements BackendDisplayConfig {
     static final String STAYED_CLOSE = "stayed-close";
     static final String MADE_ROOM = "made-room";
     static final String GREW_HERE = "grew-here";
@@ -11,36 +11,36 @@ final class BackendBoardConfig implements BackendDisplayConfig {
 
     private final FileConfiguration source;
 
-    BackendBoardConfig(FileConfiguration source) {
+    BackendHudConfig(FileConfiguration source) {
         this.source = source;
     }
 
-    String path(String boardKey) {
-        return "boards." + boardKey;
+    String path(String hudKey) {
+        return "hud." + hudKey;
     }
 
-    boolean enabled(String boardKey) {
-        return this.booleanValue(this.path(boardKey) + ".enabled", false);
+    boolean enabled(String hudKey) {
+        return this.booleanValue(this.path(hudKey) + ".enabled", false);
     }
 
-    int refreshMinutes(String boardKey) {
-        return this.intValue(this.path(boardKey) + ".refresh-minutes", 1, 1, 1440);
+    int refreshMinutes(String hudKey) {
+        return this.intValue(this.path(hudKey) + ".refresh-minutes", 1, 1, 1440);
     }
 
-    int top(String boardKey) {
-        return this.intValue(this.path(boardKey) + ".top", 5, 1, 10);
+    int top(String hudKey) {
+        return this.intValue(this.path(hudKey) + ".top", 5, 1, 10);
     }
 
-    boolean trackBlocksChanged(String boardKey) {
-        return this.booleanValue(this.path(boardKey) + ".scoring.track-blocks-changed", true);
+    boolean trackBlocksChanged(String hudKey) {
+        return this.booleanValue(this.path(hudKey) + ".scoring.track-blocks-changed", true);
     }
 
-    boolean bedrockEnabled(String boardKey) {
-        return this.booleanValue(this.path(boardKey) + ".display.bedrock.enabled", false);
+    boolean bedrockEnabled(String hudKey) {
+        return this.booleanValue(this.path(hudKey) + ".display.bedrock.enabled", false);
     }
 
-    boolean bedrockEnabledAtPath(String boardPath) {
-        return this.booleanValue(boardPath + ".display.bedrock.enabled", false);
+    boolean bedrockEnabledAtPath(String hudPath) {
+        return this.booleanValue(hudPath + ".display.bedrock.enabled", false);
     }
 
     @Override

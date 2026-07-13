@@ -92,7 +92,7 @@ foreach ($service in @($hud, $stayed)) {
 
 foreach ($required in @(
     "private BackendDisplayConfig backendDisplayConfig()",
-    "return this.boardConfig;",
+    "return this.hudConfig;",
     "private Component backendDisplayComponent(BackendDisplayModel.Entry entry)",
     "entry.colorRole() == BackendDisplayModel.ColorRole.WHITE ? HoneyPalette.DEFAULT_WHITE : NamedTextColor.GRAY",
     "private TextDisplay.TextAlignment backendDisplayAlignment(BackendDisplayModel.Alignment alignment)",

@@ -40,38 +40,84 @@ final class ProxyLifecycleService {
         }
     }
 
-    boolean stayedCloseCollectionEnabled(Path boardsConfigFile) {
-        if (boardsConfigFile == null || !Files.isRegularFile(boardsConfigFile, new LinkOption[0])) {
-            return false;
+    boolean stayedCloseCollectionEnabled(Path hudConfigFile) {
+        if (hudConfigFile == null) return false;
+        if (Files.isRegularFile(hudConfigFile, new LinkOption[0])) {
+            return this.nestedFeatureEnabled(hudConfigFile, "hud", "stayed-close");
         }
+        Path configRoot = hudConfigFile.getParent();
+        if (configRoot == null) return false;
+        Path legacyBoards = configRoot.resolve("boards.yml");
+        if (Files.isRegularFile(legacyBoards, new LinkOption[0])) {
+            return this.nestedFeatureEnabled(legacyBoards, "boards", "stayed-close");
+        }
+        return this.topLevelFeatureEnabled(configRoot.resolve("config.yml"), "stayed-close");
+    }
+
+    private boolean nestedFeatureEnabled(Path file, String rootName, String featureName) {
         try {
-            boolean boardsSection = false;
-            boolean stayedCloseSection = false;
-            for (String line : Files.readAllLines(boardsConfigFile, StandardCharsets.UTF_8)) {
+            boolean rootSection = false;
+            boolean featureSection = false;
+            for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
                 String stripped = line.strip();
-                if (!boardsSection && "boards:".equals(stripped)) {
-                    boardsSection = true;
+                if (!rootSection && (rootName + ":").equals(stripped) && this.exactIndent(line, 0)) {
+                    rootSection = true;
                     continue;
                 }
-                if (boardsSection && line.startsWith("  ") && !line.startsWith("    ") && "stayed-close:".equals(stripped)) {
-                    stayedCloseSection = true;
+                if (rootSection && (featureName + ":").equals(stripped) && this.exactIndent(line, 2)) {
+                    featureSection = true;
                     continue;
                 }
-                if (!stayedCloseSection) {
-                    continue;
-                }
-                if (!line.isBlank() && !line.startsWith("    ")) {
-                    return false;
-                }
-                if (stripped.startsWith("enabled:")) {
+                if (!featureSection) continue;
+                if (!line.isBlank() && !this.atLeastIndent(line, 4)) return false;
+                if (this.exactIndent(line, 4) && stripped.startsWith("enabled:")) {
                     return "true".equalsIgnoreCase(AccessRepository.cleanScalar(stripped.substring("enabled:".length()).strip()));
                 }
             }
         }
-        catch (IOException exception) {
-            this.logger.debug("Unable to read Stayed Close collection gate.", (Throwable)exception);
+        catch (IOException | RuntimeException exception) {
+            this.logGateReadFailure(file, exception);
         }
         return false;
+    }
+
+    private boolean topLevelFeatureEnabled(Path file, String featureName) {
+        if (!Files.isRegularFile(file, new LinkOption[0])) return false;
+        try {
+            boolean featureSection = false;
+            for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
+                String stripped = line.strip();
+                if (!featureSection && (featureName + ":").equals(stripped) && this.exactIndent(line, 0)) {
+                    featureSection = true;
+                    continue;
+                }
+                if (!featureSection) continue;
+                if (!line.isBlank() && !this.atLeastIndent(line, 2)) return false;
+                if (this.exactIndent(line, 2) && stripped.startsWith("enabled:")) {
+                    return "true".equalsIgnoreCase(AccessRepository.cleanScalar(stripped.substring("enabled:".length()).strip()));
+                }
+            }
+        }
+        catch (IOException | RuntimeException exception) {
+            this.logGateReadFailure(file, exception);
+        }
+        return false;
+    }
+
+    private boolean exactIndent(String line, int spaces) {
+        return this.atLeastIndent(line, spaces) && (line.length() == spaces || line.charAt(spaces) != ' ');
+    }
+
+    private boolean atLeastIndent(String line, int spaces) {
+        if (line == null || line.length() < spaces) return false;
+        for (int index = 0; index < spaces; index++) {
+            if (line.charAt(index) != ' ') return false;
+        }
+        return true;
+    }
+
+    private void logGateReadFailure(Path file, Exception exception) {
+        if (this.logger != null) this.logger.debug("Unable to read Stayed Close collection gate. Source: {}", file, exception);
     }
 
     String buildSourceSnapshot(Class<?> ownerClass) {

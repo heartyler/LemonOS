@@ -60,17 +60,17 @@ if (-not $backupOperationSource.Contains("catch (AtomicMoveNotSupportedException
     throw "LemonOS backup archive replacement must keep a non-atomic move fallback."
 }
 
-if (-not $source.Contains('this.setMissing(this.config, "stayed-close.title", "Stayclose")')) {
-    throw "LemonOS Stayed Close title default must be migrated into config."
+if (-not $source.Contains('new BackendHudDefinition("stayed-close"')) {
+    throw "LemonOS Stayed Close must be part of the canonical HUD definition registry."
 }
 
-if (-not $source.Contains('this.stayedCloseDisplayService.model(this.backendDisplayConfig(), arrayList)')) {
+if (-not $source.Contains('this.stayedCloseDisplayService.model(this.backendDisplayConfig(), hudDefinition.configPath(), arrayList)')) {
     throw "LemonOS Stayed Close display must render through the backend display model."
 }
 
 $displayServicePath = Join-Path $Root "src\main\java\dev\lemonos\BackendStayedCloseDisplayService.java"
 $displayService = Get-Content -Raw -LiteralPath $displayServicePath
-if (-not $displayService.Contains('config.stringValue("stayed-close.title", "Stayclose").trim()')) {
+if (-not $displayService.Contains('config.stringValue(path + ".title", "Stayclose").trim()')) {
     throw "LemonOS Stayed Close display title must render from config."
 }
 
@@ -80,7 +80,7 @@ if ($source.Contains('Component.text((String)"Stayed Close", (TextColor)NamedTex
 
 $hudConfigMigrationServicePath = Join-Path $Root "src\main\java\dev\lemonos\BackendHudConfigMigrationService.java"
 $hudConfigMigrationService = Get-Content -Raw -LiteralPath $hudConfigMigrationServicePath
-if (-not $hudConfigMigrationService.Contains("private boolean migrateAutoChainDisplay(FileConfiguration config, Board board, String displayPath)")) {
+if (-not $hudConfigMigrationService.Contains("private boolean migrateAutoChainDisplay(FileConfiguration config, Hud hud, String displayPath)")) {
     throw "LemonOS AutoChain HUD display migration must be kept for old generated configs."
 }
 

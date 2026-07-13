@@ -64,7 +64,7 @@ public final class LemonOSProxyPlugin {
     private Path onlineFile;
     private Path placesFile;
     private Path playtimeFile;
-    private Path boardsConfigFile;
+    private Path hudConfigFile;
     private AccessRepository accessRepository;
     private PlaytimeRepository playtimeRepository;
     private OnlinePlayersRepository onlinePlayersRepository;
@@ -95,7 +95,7 @@ public final class LemonOSProxyPlugin {
         this.onlineFile = runtimePaths.onlineFile;
         this.placesFile = runtimePaths.placesFile;
         this.playtimeFile = runtimePaths.playtimeFile;
-        this.boardsConfigFile = runtimePaths.boardsConfigFile;
+        this.hudConfigFile = runtimePaths.hudConfigFile;
         this.accessRepository = new AccessRepository(this.accessFile, this.logger);
         this.playtimeRepository = new PlaytimeRepository(this.playtimeFile, this.logger);
         this.onlinePlayersRepository = new OnlinePlayersRepository(this.onlineFile, this.logger);
@@ -224,7 +224,7 @@ public final class LemonOSProxyPlugin {
     }
 
     private boolean stayedCloseCollectionEnabled() {
-        return this.lifecycleService != null && this.lifecycleService.stayedCloseCollectionEnabled(this.boardsConfigFile);
+        return this.lifecycleService != null && this.lifecycleService.stayedCloseCollectionEnabled(this.hudConfigFile);
     }
 
     private void wakePlace(ServerConnection serverConnection, UUID uUID, String string) {

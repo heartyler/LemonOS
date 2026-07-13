@@ -2,6 +2,7 @@ package dev.lemonos;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.logging.Logger;
 import dev.lemonos.storage.BackendYamlStore;
@@ -25,17 +26,30 @@ final class BackendConfigMigrationOrchestrator {
         this.yamlStore = yamlStore;
     }
 
-    void migrate(Target target, LegacyDefaults legacyDefaults, List<BackendConfigDefaultGroupService.PlaceDefault> placeDefaults) {
+    MigrationResult migrate(Target target, LegacyDefaults legacyDefaults, List<BackendConfigDefaultGroupService.PlaceDefault> placeDefaults) {
+        boolean hudChanged = this.featureMigrationService.migrateHud(
+                target.config(), target.legacyBoards(), target.hud(), target.hudFileCreated());
+        BackendFeatureConfigMigrationService.RecipeMigration recipeMigration = this.featureMigrationService.migrateRecipes(
+                target.survival(), target.recipes(), target.recipesFileCreated());
         LegacyDefaultResult legacy = legacyDefaults.apply();
-
-        boolean boardsChanged = this.featureMigrationService.migrateBoards(
-                target.config(), target.boards(), target.boardsFileCreated());
         boolean atmosphereChanged = this.featureMigrationService.migrateAtmosphere(
                 target.config(), target.atmosphere(), target.atmosphereFileCreated());
         boolean atmosphereSaved = this.save(
                 target.atmosphereFile(), target.atmosphere(), atmosphereChanged || legacy.atmosphereChanged());
-        this.save(target.boardsFile(), target.boards(), boardsChanged || legacy.boardsChanged());
+        boolean hudSaved = this.save(target.hudFile(), target.hud(), hudChanged || legacy.hudChanged());
+        boolean recipesSaved = this.save(target.recipesFile(), target.recipes(), recipeMigration.recipesChanged());
         boolean configChanged = legacy.configChanged();
+        if (hudSaved) {
+            if (target.config().contains("stayed-close")) {
+                target.config().set("stayed-close", null);
+                configChanged = true;
+            }
+            if (target.config().contains("hud")) {
+                target.config().set("hud", null);
+                configChanged = true;
+            }
+            this.removeLegacyBoardsFile(target.legacyBoardsFile());
+        }
         if (atmosphereSaved && target.config().contains("atmosphere")) {
             target.config().set("atmosphere", null);
             configChanged = true;
@@ -45,7 +59,26 @@ final class BackendConfigMigrationOrchestrator {
         this.save(target.messagesFile(), target.messages(), this.defaultGroupService.applyMessageDefaults(target.messages()));
         this.save(target.placesFile(), target.places(), this.defaultGroupService.applyPlaceDefaults(target.places(), placeDefaults));
         this.save(target.sandboxFile(), target.sandbox(), this.defaultGroupService.applySandboxDefaults(target.sandbox()));
-        this.save(target.survivalFile(), target.survival(), this.defaultGroupService.applySurvivalDefaults(target.survival()));
+        boolean survivalChanged = this.defaultGroupService.applySurvivalDefaults(target.survival());
+        if (recipesSaved && recipeMigration.retireLegacySurvivalSection()
+                && target.survival().contains("survival.recipe-book")) {
+            target.survival().set("survival.recipe-book", null);
+            survivalChanged = true;
+        }
+        this.save(target.survivalFile(), target.survival(), survivalChanged);
+        return new MigrationResult(hudSaved, atmosphereSaved, recipesSaved);
+    }
+
+    private void removeLegacyBoardsFile(File file) {
+        if (file == null || !file.isFile()) return;
+        try {
+            Files.deleteIfExists(file.toPath());
+            Files.deleteIfExists(file.toPath().resolveSibling(file.getName() + ".lock"));
+            this.logger.info("LemonOS config migration retired legacy boards.yml after hud.yml was saved.");
+        }
+        catch (IOException exception) {
+            this.logger.warning("Unable to retire legacy LemonOS config file boards.yml: " + exception.getMessage());
+        }
     }
 
     private boolean save(File file, FileConfiguration configuration, boolean changed) {
@@ -71,7 +104,10 @@ final class BackendConfigMigrationOrchestrator {
         LegacyDefaultResult apply();
     }
 
-    record LegacyDefaultResult(boolean configChanged, boolean boardsChanged, boolean atmosphereChanged) {
+    record LegacyDefaultResult(boolean configChanged, boolean hudChanged, boolean atmosphereChanged) {
+    }
+
+    record MigrationResult(boolean hudReady, boolean atmosphereReady, boolean recipesReady) {
     }
 
     record Target(
@@ -80,16 +116,21 @@ final class BackendConfigMigrationOrchestrator {
             File placesFile,
             File sandboxFile,
             File survivalFile,
-            File boardsFile,
+            File hudFile,
+            File legacyBoardsFile,
             File atmosphereFile,
+            File recipesFile,
             FileConfiguration config,
             FileConfiguration messages,
             FileConfiguration places,
             FileConfiguration sandbox,
             FileConfiguration survival,
-            FileConfiguration boards,
+            FileConfiguration hud,
+            FileConfiguration legacyBoards,
             FileConfiguration atmosphere,
-            boolean boardsFileCreated,
-            boolean atmosphereFileCreated) {
+            FileConfiguration recipes,
+            boolean hudFileCreated,
+            boolean atmosphereFileCreated,
+            boolean recipesFileCreated) {
     }
 }

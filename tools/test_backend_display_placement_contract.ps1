@@ -16,8 +16,6 @@ $backend = Get-Content -Raw -LiteralPath $backendPath
 
 foreach ($required in @(
     "final class BackendDisplayPlacementService",
-    "Placement stayedClosePlacement(BackendDisplayConfig config, String fallbackWorld)",
-    "return this.placement(config, `"stayed-close`", fallbackWorld)",
     "Placement hudPlacement(BackendDisplayConfig config, String configPath, String fallbackWorld)",
     "private Placement placement(BackendDisplayConfig config, String configPath, String fallbackWorld)",
     "config.stringValue(configPath + `".display.world`", fallbackWorld)",
@@ -43,7 +41,7 @@ foreach ($required in @(
     "private BackendDisplayPlacementService displayPlacementService",
     "this.displayPlacementService = new BackendDisplayPlacementService()",
     "BackendDisplayPlacementService.Placement placement = this.displayPlacementService.hudPlacement(this.backendDisplayConfig(), string5, this.placeSpawnWorld(this.currentServer))",
-    "BackendDisplayPlacementService.Placement placement = this.displayPlacementService.stayedClosePlacement(this.backendDisplayConfig(), this.placeSpawnWorld(ServerId.LOBBY))",
+    "BackendDisplayPlacementService.Placement placement = this.displayPlacementService.hudPlacement(this.backendDisplayConfig(), hudDefinition.configPath(), this.placeSpawnWorld(ServerId.LOBBY))",
     "World world = Bukkit.getWorld((String)placement.worldName())",
     "Location location = this.backendDisplayLocation(world, placement)",
     "this.forceLoadBackendDisplayLocation(world, location)",

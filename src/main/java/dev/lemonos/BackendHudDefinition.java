@@ -2,7 +2,7 @@ package dev.lemonos;
 
 import java.util.Set;
 
-record BackendBoardDefinition(
+record BackendHudDefinition(
         String dataKey,
         String rolePrefix,
         String defaultTitle,
@@ -12,17 +12,27 @@ record BackendBoardDefinition(
         double defaultY,
         double defaultZ,
         Set<String> servers,
-        boolean trackBlocksChanged) {
+        boolean trackBlocksChanged,
+        RankingSource rankingSource) {
 
-    BackendBoardDefinition {
+    BackendHudDefinition {
         servers = Set.copyOf(servers);
     }
 
     String configPath() {
-        return "boards." + this.dataKey;
+        return "hud." + this.dataKey;
     }
 
     boolean enabledOn(String server) {
         return server != null && this.servers.contains(server);
+    }
+
+    boolean usesPlaytime() {
+        return this.rankingSource == RankingSource.PLAYTIME;
+    }
+
+    enum RankingSource {
+        PLAYTIME,
+        HUD_STATISTICS
     }
 }

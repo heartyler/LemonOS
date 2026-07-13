@@ -16,19 +16,7 @@ $backend = Get-Content -Raw -LiteralPath $backendPath
 
 foreach ($required in @(
     "final class BackendDisplayEntityService",
-    "EntityStyle stayedCloseStyle(BackendDisplayConfig config, String role, boolean bedrockRole, boolean bottomRole, boolean bedrockBottomRole)",
     "EntityStyle hudStyle(BackendDisplayConfig config, String configPath, String role)",
-    "config.doubleValue(`"stayed-close.display.bedrock.bottom-scale`", 0.42, 0.25, 2.00)",
-    "config.doubleValue(`"stayed-close.display.bottom-scale`", 0.42, 0.25, 2.00)",
-    "config.doubleValue(`"stayed-close.display.bedrock.scale`", 0.53, 0.25, 2.00)",
-    "config.doubleValue(`"stayed-close.display.scale`", 0.53, 0.25, 2.00)",
-    "config.intValue(`"stayed-close.display.bedrock.background-alpha`", 0, 0, 255)",
-    "config.intValue(`"stayed-close.display.background-alpha`", 0, 0, 255)",
-    "config.intValue(`"stayed-close.display.view-range`", 32, 1, 128)",
-    "config.intValue(`"stayed-close.display.bedrock.bottom-line-width`", 260, 60, 800)",
-    "config.intValue(`"stayed-close.display.bottom-line-width`", 260, 60, 800)",
-    "config.intValue(`"stayed-close.display.bedrock.line-width`", 260, 60, 800)",
-    "config.intValue(`"stayed-close.display.line-width`", 220, 60, 800)",
     "boolean bedrockRole = role.contains(`"bedrock_`")",
     "boolean bedrockBottomRole = role.endsWith(`"bedrock_bottom`")",
     "boolean bottomRole = role.endsWith(`"bottom`") && !bedrockBottomRole",
@@ -57,7 +45,7 @@ foreach ($required in @(
 foreach ($required in @(
     "private BackendDisplayEntityService displayEntityService",
     "this.displayEntityService = new BackendDisplayEntityService()",
-    "this.applyBackendDisplayEntity(textDisplay, component, textAlignment, this.displayEntityService.stayedCloseStyle(this.backendDisplayConfig(), string, bl, bl2, bl3))",
+    "this.applyBackendDisplayEntity(textDisplay, component, textAlignment, this.displayEntityService.hudStyle(this.backendDisplayConfig(), `"hud.stayed-close`", string))",
     "this.applyBackendDisplayEntity(textDisplay, component, textAlignment, this.displayEntityService.hudStyle(this.backendDisplayConfig(), string2, string))",
     "private void applyBackendDisplayEntity(TextDisplay textDisplay, Component component, TextDisplay.TextAlignment textAlignment, BackendDisplayEntityService.EntityStyle entityStyle)",
     "textDisplay.text(component)",

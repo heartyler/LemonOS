@@ -133,8 +133,6 @@ final class BackendConfigDefaultGroupService {
         changed |= this.setMissing(survival, "survival.refill.tools", true);
         changed |= this.setMissing(survival, "survival.refill.weapons", true);
         changed |= this.setMissing(survival, "survival.refill.prefer-inventory-first", true);
-        changed |= this.setMissing(survival, "survival.recipe-book.unlock-all", true);
-        changed |= this.setMissing(survival, "survival.recipe-book.silent", true);
         changed |= this.setMissing(survival, "survival.chain-status.enabled", true);
         return changed;
     }

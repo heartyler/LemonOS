@@ -14,7 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class BackendConfigBootstrapService {
     private static final String[] FILES = {
         "config.yml", "messages.yml", "places.yml", "sandbox.yml",
-        "survival.yml", "boards.yml", "atmosphere.yml"
+        "survival.yml", "hud.yml", "atmosphere.yml", "recipes.yml"
     };
 
     private final JavaPlugin plugin;
@@ -40,17 +40,21 @@ public final class BackendConfigBootstrapService {
         File placesFile = layout.configFile("places.yml");
         File sandboxFile = layout.configFile("sandbox.yml");
         File survivalFile = layout.configFile("survival.yml");
-        File boardsFile = layout.configFile("boards.yml");
+        File hudFile = layout.configFile("hud.yml");
+        File legacyBoardsFile = layout.configFile("boards.yml");
         File atmosphereFile = layout.configFile("atmosphere.yml");
+        File recipesFile = layout.configFile("recipes.yml");
         return new LoadedConfig(
-            configFile, messagesFile, placesFile, sandboxFile, survivalFile, boardsFile, atmosphereFile,
+            configFile, messagesFile, placesFile, sandboxFile, survivalFile, hudFile, legacyBoardsFile, atmosphereFile, recipesFile,
             this.yamlStore.load(configFile),
             this.yamlStore.load(messagesFile),
             this.yamlStore.load(placesFile),
             this.yamlStore.load(sandboxFile),
             this.yamlStore.load(survivalFile),
-            this.yamlStore.load(boardsFile),
-            this.yamlStore.load(atmosphereFile));
+            this.yamlStore.load(hudFile),
+            this.yamlStore.load(legacyBoardsFile),
+            this.yamlStore.load(atmosphereFile),
+            this.yamlStore.load(recipesFile));
     }
 
     private void ensureBundledPreset(File target, String name) {
@@ -69,9 +73,11 @@ public final class BackendConfigBootstrapService {
 
     public record LoadedConfig(
         File configFile, File messagesFile, File placesFile, File sandboxFile,
-        File survivalFile, File boardsFile, File atmosphereFile,
+        File survivalFile, File hudFile, File legacyBoardsFile, File atmosphereFile, File recipesFile,
         FileConfiguration config, FileConfiguration messages, FileConfiguration places,
-        FileConfiguration sandbox, FileConfiguration survival, FileConfiguration boards,
-        FileConfiguration atmosphere) {
+        FileConfiguration sandbox, FileConfiguration survival, FileConfiguration hud,
+        FileConfiguration legacyBoards,
+        FileConfiguration atmosphere,
+        FileConfiguration recipes) {
     }
 }

@@ -4,10 +4,6 @@
 package dev.lemonos;
 
 final class BackendDisplayPlacementService {
-    Placement stayedClosePlacement(BackendDisplayConfig config, String fallbackWorld) {
-        return this.placement(config, "stayed-close", fallbackWorld);
-    }
-
     Placement hudPlacement(BackendDisplayConfig config, String configPath, String fallbackWorld) {
         return this.placement(config, configPath, fallbackWorld);
     }

@@ -74,7 +74,7 @@ servers:
     Assert-Equal @($reset.Operations).Count 2 "Runtime reset operation count mismatch."
 
     $verification = & $verify -RuntimeRoot $RuntimeRoot
-    Assert-Equal $verification.ConfigFiles 7 "Runtime config file count mismatch."
+    Assert-Equal $verification.ConfigFiles 8 "Runtime config file count mismatch."
     Assert-Equal $verification.DataFiles 9 "Runtime data file count mismatch."
     Assert-Equal $verification.AccessSchema "3.0" "Runtime access schema mismatch."
 

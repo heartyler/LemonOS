@@ -11,16 +11,15 @@ final class BackendFeatureConfigMigrationService {
         this.migration = migration;
     }
 
-    boolean migrateBoards(FileConfiguration legacy, FileConfiguration boards, boolean overwriteFromLegacy) {
-        boolean changed = this.metadata(boards);
-        changed |= this.copySection(legacy, "stayed-close", boards, "boards.stayed-close", overwriteFromLegacy, false);
-        changed |= this.copySection(legacy, "hud.made-room", boards, "boards.made-room", overwriteFromLegacy, false);
-        changed |= this.copySection(legacy, "hud.grew-here", boards, "boards.grew-here", overwriteFromLegacy, false);
-        changed |= this.copySection(legacy, "hud.auto-chain", boards, "boards.auto-chain", overwriteFromLegacy, false);
+    boolean migrateHud(FileConfiguration legacy, FileConfiguration legacyBoards, FileConfiguration hud, boolean overwriteFromLegacy) {
+        boolean changed = this.metadata(hud);
+        changed |= this.copySection(legacy, "stayed-close", hud, "hud.stayed-close", overwriteFromLegacy, false);
+        changed |= this.copySection(legacy, "hud", hud, "hud", overwriteFromLegacy, false);
+        changed |= this.copySection(legacyBoards, "boards", hud, "hud", overwriteFromLegacy, false);
         for (String key : new String[]{"stayed-close", "made-room", "grew-here", "auto-chain"}) {
-            String path = "boards." + key + ".enabled";
-            if (!boards.isBoolean(path)) {
-                boards.set(path, false);
+            String path = "hud." + key + ".enabled";
+            if (!hud.isBoolean(path)) {
+                hud.set(path, false);
                 changed = true;
             }
         }
@@ -36,6 +35,23 @@ final class BackendFeatureConfigMigrationService {
         }
         changed |= this.migration.setMissing(atmosphere, "atmosphere.enabled", true);
         return changed;
+    }
+
+    RecipeMigration migrateRecipes(FileConfiguration survival, FileConfiguration recipes, boolean overwriteFromLegacy) {
+        boolean recipesChanged = this.metadata(recipes);
+        String legacyPath = "survival.recipe-book.unlock-all";
+        String canonicalPath = "recipe-book.unlock-all.survival";
+        if (survival != null && survival.isBoolean(legacyPath)
+                && (overwriteFromLegacy || !recipes.isSet(canonicalPath))) {
+            boolean legacyValue = survival.getBoolean(legacyPath, true);
+            if (!recipes.isBoolean(canonicalPath) || recipes.getBoolean(canonicalPath) != legacyValue) {
+                recipes.set(canonicalPath, legacyValue);
+                recipesChanged = true;
+            }
+        }
+        recipesChanged |= this.migration.setMissing(recipes, canonicalPath, true);
+        recipesChanged |= this.migration.setMissing(recipes, "recipe-book.unlock-all.creative", true);
+        return new RecipeMigration(recipesChanged, survival != null && survival.contains("survival.recipe-book"));
     }
 
     private boolean metadata(FileConfiguration target) {
@@ -65,5 +81,8 @@ final class BackendFeatureConfigMigrationService {
             }
         }
         return changed;
+    }
+
+    record RecipeMigration(boolean recipesChanged, boolean retireLegacySurvivalSection) {
     }
 }
