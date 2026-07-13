@@ -96,7 +96,7 @@ final class ProxyRuntimeStateService {
                 continue;
             }
             String status = this.placeStatusRepository.status(place);
-            boolean canConnect = this.placeRuntimeProbe.canConnect(port);
+            boolean canConnect = this.placeRuntimeProbe.canConnect(place);
             if (canConnect) {
                 if ("unavailable".equals(status) || "unavailable.".equals(status) || PlaceStatusRepository.isWakeStatus(status) || status.isBlank()) {
                     this.setPlaceStatus(place, "ready");

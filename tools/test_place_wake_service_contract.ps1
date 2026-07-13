@@ -17,8 +17,8 @@ $proxy = Get-Content -Raw -LiteralPath $proxyPath
 foreach ($required in @(
     "final class PlaceWakeService",
     "private final Set<String> wakingServers",
-    "void wakeOnly(String place, int port)",
-    "void wakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place, int port)",
+    "void wakeOnly(String place)",
+    "void wakeAndConnect(ServerConnection serverConnection, Player player, RegisteredServer registeredServer, UUID uuid, String place)",
     "waitForWakeAndConnect",
     "waitForWakeStatus",
     "CompletableFuture.runAsync",
@@ -50,8 +50,8 @@ foreach ($forbidden in @(
 }
 
 if ($proxy -notmatch "new PlaceWakeService\(this\.server, this\.logger, this\.placeRuntimeProbe, this\.placeStatusRepository, this::scheduleProxyTask, this\.placeConnectService::connectPlayerToPlace, this\.placeConnectService::sendPlaceResult\)" -or
-    $proxy -notmatch "this\.placeWakeService\.wakeOnly\(string2, n\)" -or
-    $proxy -notmatch "this\.placeWakeService\.wakeAndConnect\(serverConnection, player, registeredServer, uuid, place, port\)") {
+    $proxy -notmatch "this\.placeWakeService\.wakeOnly\(string2\)" -or
+    $proxy -notmatch "this\.placeWakeService\.wakeAndConnect\(serverConnection, player, registeredServer, uuid, place\)") {
     throw "LemonOSProxyPlugin is not wired through PlaceWakeService."
 }
 

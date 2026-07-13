@@ -34,7 +34,7 @@ foreach ($required in @(
     "Unable to clear disabled Stayed Close state.",
     "List.of(`"lobby`", `"survival`", `"creative`")",
     "this.placeRuntimeProbe.port(place)",
-    "this.placeRuntimeProbe.canConnect(port)",
+    "this.placeRuntimeProbe.canConnect(place)",
     "this.placeStatusRepository.status(place)",
     "this.placeStatusRepository.setStatus(place, status)",
     "PlaceStatusRepository.isWakeStatus(status)",

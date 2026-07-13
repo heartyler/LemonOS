@@ -100,8 +100,8 @@ public final class LemonOSProxyPlugin {
         this.playtimeRepository = new PlaytimeRepository(this.playtimeFile, this.logger);
         this.onlinePlayersRepository = new OnlinePlayersRepository(this.onlineFile, this.logger);
         this.placeStatusRepository = new PlaceStatusRepository(this.placesFile, this.logger);
-        this.placeRuntimeProbe = new PlaceRuntimeProbe(this.sharedDataFolder.getParent(), this.logger);
-        this.placeConnectService = new PlaceConnectService(this.server, this.logger, this.adminChannel, this.placeRuntimeProbe, this.placeStatusRepository, this::scheduleProxyTask, (serverConnection, player, registeredServer, uuid, place, port) -> this.placeWakeService.wakeAndConnect(serverConnection, player, registeredServer, uuid, place, port));
+        this.placeRuntimeProbe = new PlaceRuntimeProbe(this.sharedDataFolder.getParent(), this.logger, place -> this.server.getServer(place).map(registeredServer -> registeredServer.getServerInfo().getAddress()).orElse(null));
+        this.placeConnectService = new PlaceConnectService(this.server, this.logger, this.adminChannel, this.placeRuntimeProbe, this.placeStatusRepository, this::scheduleProxyTask, (serverConnection, player, registeredServer, uuid, place) -> this.placeWakeService.wakeAndConnect(serverConnection, player, registeredServer, uuid, place));
         this.placeWakeService = new PlaceWakeService(this.server, this.logger, this.placeRuntimeProbe, this.placeStatusRepository, this::scheduleProxyTask, this.placeConnectService::connectPlayerToPlace, this.placeConnectService::sendPlaceResult);
         this.peopleService = new PeopleService(this.server, this.logger, this.adminChannel, this::scheduleProxyTask);
         this.skinService = new SkinService(this.server, this.logger, this.adminChannel, this::scheduleProxyTask);
@@ -230,14 +230,14 @@ public final class LemonOSProxyPlugin {
     private void wakePlace(ServerConnection serverConnection, UUID uUID, String string) {
         String string2 = this.normalizePlaceName(string);
         int n = this.placePort(string2);
-        if (!this.playerOnSourceServer(serverConnection, uUID) || !this.canProxyWake(string2) || n <= 0 || this.canConnect(n)) {
+        if (!this.playerOnSourceServer(serverConnection, uUID) || !this.canProxyWake(string2) || n <= 0 || this.canConnect(string2)) {
             return;
         }
         String string3 = this.placeStatus(string2);
         if (!this.isWakeStatus(string3) && !this.isReadyStatus(string3)) {
             return;
         }
-        this.placeWakeService.wakeOnly(string2, n);
+        this.placeWakeService.wakeOnly(string2);
     }
 
     private String normalizePlaceName(String string) {
@@ -252,8 +252,8 @@ public final class LemonOSProxyPlugin {
         return this.placeRuntimeProbe.port(string);
     }
 
-    private boolean canConnect(int n) {
-        return this.placeRuntimeProbe.canConnect(n);
+    private boolean canConnect(String string) {
+        return this.placeRuntimeProbe.canConnect(string);
     }
 
     private boolean startPlaceServer(String string) {
